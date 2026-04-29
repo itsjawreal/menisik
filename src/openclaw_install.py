@@ -45,17 +45,17 @@ description: Use the local GitHub Contribution Engine wrapper to run health chec
 metadata: {{"openclaw": {{"requires": {{"bins": ["python3"]}}}}}}
 ---
 
-## EXECUTION RULES — Read this first, every time
+## EXECUTION RULES
 
-**Rule 1 — Execute immediately.**
+**Rule 1 - Execute immediately.**
 When the user asks to check health, show the latest contribution report, inspect a repo, or run one contribution, execute the wrapper immediately.
 Do NOT only describe a plan. Do NOT ask for the repo path if the user already gave a GitHub URL or `owner/repo`.
 
-**Rule 2 — Prefer safe defaults.**
+**Rule 2 - Prefer safe defaults.**
 Use preview / dry-run behavior unless the user explicitly asks to submit a real PR.
 For natural-language chat requests, prefer `message --text "..."` so the contribution engine can route the request safely.
 
-**Rule 3 — Show exact output first.**
+**Rule 3 - Show exact output first.**
 Paste the exact stdout from the wrapper before any short explanation.
 Do NOT claim success without the real tool output.
 
@@ -97,17 +97,24 @@ def _wrapper_text(engine_bin: str) -> str:
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 ENGINE_BIN = {engine_bin!r}
+REPO_ROOT = str(Path(ENGINE_BIN).resolve().parents[2])
 
 
 def run_engine(args: list[str]) -> int:
+    env = dict(os.environ)
+    env.setdefault("GITHUB_CONTRIBUTION_ENGINE_ROOT", REPO_ROOT)
     proc = subprocess.run(
         [ENGINE_BIN, *args],
         capture_output=True,
         text=True,
+        cwd=REPO_ROOT,
+        env=env,
     )
     if proc.stdout:
         sys.stdout.write(proc.stdout)

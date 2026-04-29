@@ -33,6 +33,9 @@ class OpenClawInstallTests(unittest.TestCase):
             self.assertIn(".openclaw/tools/contribution.py", skill_text.replace("\\", "/"))
             self.assertIn(".openclaw/workspace/skills/github-contribution-engine/SKILL.md", str(skill_path).replace("\\", "/"))
             self.assertIn("ENGINE_BIN = '/srv/engine/.venv/bin/github-contribution-engine'", tool_text)
+            self.assertIn('REPO_ROOT = str(Path(ENGINE_BIN).resolve().parents[2])', tool_text)
+            self.assertIn('cwd=REPO_ROOT', tool_text)
+            self.assertIn('env.setdefault("GITHUB_CONTRIBUTION_ENGINE_ROOT", REPO_ROOT)', tool_text)
             self.assertIn('return run_engine(["--command-text", args.text])', tool_text)
 
     def test_install_falls_back_to_shared_skill_dir_when_workspace_missing(self) -> None:
