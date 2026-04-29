@@ -129,6 +129,38 @@ V1 pattern classes:
 
 ## Setup
 
+Bootstrap on a Linux VPS:
+
+```bash
+bash scripts/install_vps.sh
+```
+
+One-line bootstrap from a fresh server:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/BigNounce90/github-contribution-engine/master/scripts/bootstrap.sh | bash
+```
+
+What the bootstrap script does:
+
+- installs common system dependencies when possible (`git`, `python3`, `python3-venv`, `curl`, `gh`)
+- installs `uv` when possible
+- creates `.venv`
+- installs this repo into the virtual environment
+- creates `.env` from `.env.example` when missing
+- can prompt for `GITHUB_TOKEN` and save it into `.env`
+- can run `gh auth login` automatically, then continue to the next step after auth succeeds
+- presents a backend setup wizard with these choices:
+  - `Codex CLI`
+  - `Claude CLI`
+  - `LLM API key only`
+  - `Skip for now`
+- only asks the follow-up questions relevant to the selected backend
+- can prompt for `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `OPENROUTER_API_KEY` depending on the selected setup path
+- can run `codex --login` when the user chooses the interactive Codex path
+- runs `github-contribution-engine --doctor`
+- prints the remaining manual steps such as `gh auth login` and AI CLI setup
+
 Install dependencies:
 
 ```powershell
@@ -260,6 +292,18 @@ Installable path:
 
 ```powershell
 uv tool install git+https://github.com/BigNounce90/github-contribution-engine.git
+```
+
+Bootstrap alternative for a fresh VPS:
+
+```bash
+bash scripts/install_vps.sh
+```
+
+Remote one-line bootstrap:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/BigNounce90/github-contribution-engine/master/scripts/bootstrap.sh | bash
 ```
 
 After install, the MCP entrypoint becomes:
