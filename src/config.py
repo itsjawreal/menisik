@@ -22,6 +22,7 @@ if ENV_FILE.exists():
 APP_DIR = ROOT / "app"
 DATA_DIR = ROOT / "data"
 LOG_DIR = ROOT / "logs"
+RUNS_DIR = ROOT / "runs"
 PR_LOG_FILE = DATA_DIR / "pr_log.json"
 SECURITY_BLACKLIST_FILE = DATA_DIR / "security_blacklist.json"
 PROJECT_BLACKLIST_FILE = DATA_DIR / "project_blacklist.json"
@@ -29,6 +30,7 @@ STREAM_DIR = ROOT / ".stream_partials"
 
 DATA_DIR.mkdir(exist_ok=True)
 LOG_DIR.mkdir(exist_ok=True)
+RUNS_DIR.mkdir(exist_ok=True)
 
 
 # ── Runtime flags ────────────────────────────────────────────
@@ -79,6 +81,22 @@ CODEX_ARGS = _split_args(
 )
 if CODEX_ARGS == ["-p", "-"]:
     CODEX_ARGS = ["exec", "--skip-git-repo-check", "-s", "read-only", "-"]
+
+
+def _default_agent_tool() -> str:
+    if AI_BACKEND == "claude":
+        return "Claude Code"
+    return "Codex"
+
+
+def _default_model_series() -> str:
+    if AI_BACKEND == "claude":
+        return "Claude"
+    return "GPT"
+
+
+AGENT_TOOL = os.getenv("AGENT_TOOL", _default_agent_tool()).strip() or _default_agent_tool()
+MODEL_SERIES = os.getenv("MODEL_SERIES", _default_model_series()).strip() or _default_model_series()
 
 AI_TIMEOUT_MULTIPLIER = float(os.getenv("AI_TIMEOUT_MULTIPLIER", "1.0"))
 AI_TIMEOUT_MAX_SECONDS = int(os.getenv("AI_TIMEOUT_MAX_SECONDS", "900"))

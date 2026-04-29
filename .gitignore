@@ -18,6 +18,7 @@ data/project_blacklist.json
 # output / review
 pending_review/
 builds.html
+runs/
 artifacts/
 pr264_fix/
 worktrees/

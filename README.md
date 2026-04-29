@@ -1,5 +1,7 @@
 # GitHub Contribution Engine
 
+> A careful open-source contributor agent, optimized for PR acceptance rather than raw code generation.
+
 Autonomous contribution engine for finding, verifying, submitting, tracking, and learning from GitHub pull requests.
 
 This repo is now dedicated to contribution workflows only. The old crypto tool generation/adapt pipeline was archived to `E:\newbot\newauto\genoshide\crypto-builder-oldm`.
@@ -10,6 +12,7 @@ This repo is now dedicated to contribution workflows only. The old crypto tool g
 - Scans code locally for narrow, evidence-backed contribution opportunities.
 - Qualifies opportunities before spending AI calls.
 - Uses Codex or Claude CLI to produce focused patches and PR bodies.
+- Can present itself under different agent-tool and model-series labels for demos, grant forms, and operator environments.
 - Submits PRs through GitHub CLI.
 - Tracks PR lifecycle, maintainer feedback, rejections, queue state, and run summaries in SQLite.
 - Learns from outcomes so repeated weak targets are deprioritized.
@@ -19,6 +22,9 @@ The engine optimizes for contribution quality over contribution count. It should
 ## Main Commands
 
 ```powershell
+python main.py --dry-run
+python main.py --live --repo https://github.com/HKUDS/Vibe-Trading --issue https://github.com/HKUDS/Vibe-Trading/pull/60 --dry-run
+python main.py --live --repo owner/repo --dry-run
 python -m app.builder --contrib --1
 python -m app.builder --contrib owner/repo --1
 python -m app.builder --contrib owner/repo --goal feature_upgrade --1
@@ -38,6 +44,32 @@ python -m app.builder --pr --1
 python -m app.builder --pr-check
 python -m app.builder --pr-respond
 ```
+
+## Submission-Ready Demo
+
+Use the deterministic demo path for screenshots, grant forms, and quick proof:
+
+```powershell
+python main.py --dry-run
+```
+
+What it does:
+
+- emits a stable contribution-agent run summary in JSON
+- writes proof artifacts to `runs/` in both `.json` and `.md`
+- shows selected repo, issue, planned fix, validation result, PR title, and PR body
+- avoids live network or long-running AI calls
+- if you pass `--repo` or `--issue` without `--live`, they are used only to customize the demo artifact
+
+Use live mode only when you want the real GitHub + AI workflow:
+
+```powershell
+python main.py --live --repo owner/repo --dry-run
+```
+
+Current live-mode note:
+
+- `--issue` is currently metadata-only in live mode; the engine does not yet fetch and reason over the GitHub issue thread directly.
 
 ## Engine Design
 
@@ -103,6 +135,8 @@ Optional `.env` values:
 
 ```env
 AI_BACKEND=codex
+AGENT_TOOL=Codex
+MODEL_SERIES=GPT
 GITHUB_TOKEN=
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
@@ -123,6 +157,8 @@ Notes:
 
 - `CODEX_CMD=codex` is already portable if Codex CLI is on `PATH`.
 - `CLAUDE_CMD=claude` is preferred over a user-specific Windows path.
+- `AGENT_TOOL` is the user-facing tool label for demos/forms. Defaults to `Codex` or `Claude Code` based on `AI_BACKEND`.
+- `MODEL_SERIES` is the user-facing primary model family label. Defaults to `GPT` or `Claude` based on `AI_BACKEND`.
 - `CONTRIB_AUTORUN_ARGS` controls what `python run.py` and scheduled tasks do by default.
 - `CONTRIB_LANE` supports built-in presets: `general`, `crypto`, `devtools`, `frontend`, `data`, `infra`, `ml`, `docs`.
 - `CONTRIB_TOPIC_KEYWORDS` and `CONTRIB_SEARCH_QUERIES` override the preset when you need custom targeting.
@@ -170,9 +206,19 @@ Current portability status:
 ## Verification
 
 ```powershell
-python -m py_compile app\builder.py src\ai.py src\config.py src\contribution_engine.py src\contribution_store.py src\fork.py src\notify.py src\opportunity_engine.py src\pr_engine.py src\pr_generator.py src\repo_intelligence.py src\scraper.py src\security.py src\state.py
+python -m py_compile main.py app\builder.py src\agent_models.py src\ai.py src\config.py src\contribution_engine.py src\contribution_store.py src\fork.py src\notify.py src\opportunity_engine.py src\pr_engine.py src\pr_generator.py src\repo_intelligence.py src\repo_discovery.py src\issue_analyzer.py src\repo_cloner.py src\project_inspector.py src\fix_planner.py src\patch_generator.py src\validator.py src\pr_writer.py src\run_logger.py src\scraper.py src\security.py src\state.py
 python -m unittest discover -s tests -v
 ```
+
+## Grant Proof Package
+
+For Xiaomi MiMo Orbit or similar builder submissions, the recommended proof bundle is:
+
+- one screenshot of `python main.py --dry-run`
+- one generated `runs/run_*.md` artifact
+- one generated `runs/run_*.json` artifact
+- one GitHub repository link
+- one real PR/workflow example showing review-aware iteration, such as the Vibe-Trading validation CLI contribution story
 
 ## Active Docs
 
