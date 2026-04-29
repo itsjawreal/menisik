@@ -1,0 +1,33 @@
+# secrets
+.env
+
+# runtime state (temp files, not source)
+data/idea.json
+data/signal.json
+pending.json
+data/.checkpoint.json
+data/.strategy_cache.json
+data/.validated_snapshot.json
+data/builds.json
+data/adoption_memory.json
+data/feedback_signals.json
+data/security_blacklist.json
+data/project_blacklist.json
+.stream_partials/
+
+# output / review
+pending_review/
+builds.html
+
+# logs
+logs/
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
