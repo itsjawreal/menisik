@@ -24,6 +24,15 @@ def setup_logging() -> logging.Logger:
         root.addHandler(file_handler)
         root.addHandler(stream_handler)
     else:
+        for handler in root.handlers:
+            try:
+                handler.flush()
+            except Exception:
+                pass
+            try:
+                handler.close()
+            except Exception:
+                pass
         root.handlers.clear()
         root.addHandler(file_handler)
         root.addHandler(stream_handler)
