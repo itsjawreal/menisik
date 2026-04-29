@@ -41,6 +41,20 @@ contribution-mcp
 
 If the commands are not found after install, make sure uv's bin directory is on `PATH`.
 
+For one-step VPS onboarding plus native OpenClaw assets:
+
+```bash
+bash scripts/install_vps.sh
+```
+
+That setup flow can install:
+
+- the Python environment
+- `github-contribution-engine`
+- `contribution-mcp`
+- `~/.openclaw/skills/github-contribution-engine/SKILL.md`
+- `~/.openclaw/tools/contribution.py`
+
 ## OpenClaw MCP Config
 
 If your OpenClaw environment supports standard MCP server registration, use:
@@ -61,6 +75,28 @@ If your OpenClaw environment supports standard MCP server registration, use:
   }
 }
 ```
+
+## OpenClaw Native Skill
+
+This repo also supports a native OpenClaw wrapper path, modeled after `wallet-mcp`.
+
+Installed files:
+
+- `~/.openclaw/skills/github-contribution-engine/SKILL.md`
+- `~/.openclaw/tools/contribution.py`
+
+The native wrapper is useful when your Telegram / Discord / OpenClaw agent behaves like a general chat assistant instead of calling MCP tools directly.
+
+Preferred commands from that skill:
+
+- `doctor`
+- `contrib_report`
+- `repo_inspect --repo owner/repo`
+- `message --text "buat 1 kontribusi"`
+- `message --text "tampilkan report kontribusi terakhir"`
+
+For natural-language chat channels, `message --text "..."`
+is the safest default because it lets the engine route the request first.
 
 Local clone variant:
 

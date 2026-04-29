@@ -7,6 +7,40 @@ ENV_FILE="$ROOT_DIR/.env"
 EXAMPLE_ENV_FILE="$ROOT_DIR/.env.example"
 SETUP_STEP=0
 
+venv_bin_dir() {
+  if [ -d "$VENV_DIR/Scripts" ]; then
+    printf '%s' "$VENV_DIR/Scripts"
+  else
+    printf '%s' "$VENV_DIR/bin"
+  fi
+}
+
+venv_python_bin() {
+  local bin_dir
+  bin_dir="$(venv_bin_dir)"
+  if [ -x "$bin_dir/python.exe" ]; then
+    printf '%s' "$bin_dir/python.exe"
+  else
+    printf '%s' "$bin_dir/python"
+  fi
+}
+
+venv_activate_script() {
+  local bin_dir
+  bin_dir="$(venv_bin_dir)"
+  printf '%s' "$bin_dir/activate"
+}
+
+venv_engine_bin() {
+  local bin_dir
+  bin_dir="$(venv_bin_dir)"
+  if [ -x "$bin_dir/github-contribution-engine.exe" ]; then
+    printf '%s' "$bin_dir/github-contribution-engine.exe"
+  else
+    printf '%s' "$bin_dir/github-contribution-engine"
+  fi
+}
+
 if [ -t 1 ]; then
   C_RESET="$(printf '\033[0m')"
   C_BOLD="$(printf '\033[1m')"
@@ -456,6 +490,33 @@ configure_api_key_backend() {
   warn "API-key-only generation is still a partial path in this repo. Doctor will report remaining readiness gaps."
 }
 
+install_openclaw_integration() {
+  if ! confirm "Install OpenClaw skill and wrapper now?"; then
+    warn "Skipping OpenClaw native integration"
+    return 0
+  fi
+
+  local python_bin
+  local engine_bin
+  python_bin="$(venv_python_bin)"
+  engine_bin="$(venv_engine_bin)"
+
+  if [ ! -x "$python_bin" ]; then
+    warn "Python interpreter not found for OpenClaw asset install: $python_bin"
+    return 0
+  fi
+  if [ ! -x "$engine_bin" ]; then
+    warn "github-contribution-engine executable not found for OpenClaw asset install: $engine_bin"
+    return 0
+  fi
+
+  log "installing OpenClaw skill and wrapper"
+  "$python_bin" "$ROOT_DIR/src/openclaw_install.py" \
+    --engine-bin "$engine_bin" \
+    --python-bin "$python_bin"
+  ok "OpenClaw skill and wrapper installed"
+}
+
 main() {
   banner
   log "bootstrap starting in $ROOT_DIR"
@@ -481,7 +542,7 @@ main() {
   fi
 
   # shellcheck disable=SC1090
-  source "$VENV_DIR/bin/activate"
+  source "$(venv_activate_script)"
   log "upgrading pip"
   python -m pip install -U pip
 
@@ -513,6 +574,9 @@ main() {
     4) warn "Skipping backend setup for now" ;;
   esac
 
+  section "OpenClaw integration"
+  install_openclaw_integration
+
   section "Readiness check"
   log "running doctor"
   github-contribution-engine --doctor || true
@@ -520,7 +584,7 @@ main() {
   printf '\n'
   ok "bootstrap complete"
   printf '%sNext steps%s\n' "$C_BOLD" "$C_RESET"
-  todo "Run: source \"$VENV_DIR/bin/activate\""
+  todo "Run: source \"$(venv_activate_script)\""
   if ! gh auth status >/dev/null 2>&1; then
     todo "Run: gh auth login"
   fi
@@ -529,6 +593,7 @@ main() {
   fi
   todo "Run: github-contribution-engine --doctor"
   todo "Run: contribution-mcp"
+  todo "In OpenClaw, use the installed skill at ~/.openclaw/skills/github-contribution-engine/SKILL.md"
 }
 
 main "$@"

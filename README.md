@@ -141,6 +141,11 @@ One-line bootstrap from a fresh server:
 curl -fsSL https://raw.githubusercontent.com/BigNounce90/github-contribution-engine/master/scripts/bootstrap.sh | bash
 ```
 
+The guided setup can also install a native OpenClaw skill + wrapper in one flow:
+
+- `~/.openclaw/skills/github-contribution-engine/SKILL.md`
+- `~/.openclaw/tools/contribution.py`
+
 What the bootstrap script does:
 
 - installs common system dependencies when possible (`git`, `python3`, `python3-venv`, `curl`, `gh`)

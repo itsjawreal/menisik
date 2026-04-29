@@ -24,6 +24,9 @@ class InstallScriptTests(unittest.TestCase):
         self.assertIn("Replace with a new value", text)
         self.assertIn("Clear saved value and continue without it", text)
         self.assertIn("Choose how to handle existing Codex auth", text)
+        self.assertIn("Install OpenClaw skill and wrapper now?", text)
+        self.assertIn("src/openclaw_install.py", text)
+        self.assertIn("venv_activate_script", text)
 
     def test_remote_bootstrap_script_exists(self) -> None:
         script = Path("scripts/bootstrap.sh")
