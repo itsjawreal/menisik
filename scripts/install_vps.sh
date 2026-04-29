@@ -98,6 +98,51 @@ PY
   fi
 }
 
+clear_env_key() {
+  local key="$1"
+  if [ -f "$ENV_FILE" ]; then
+    python3 - "$ENV_FILE" "$key" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+key = sys.argv[2]
+lines = path.read_text(encoding="utf-8").splitlines()
+updated = [line for line in lines if not line.startswith(f"{key}=")]
+path.write_text("\n".join(updated) + ("\n" if updated else ""), encoding="utf-8")
+PY
+  fi
+  unset "$key" 2>/dev/null || true
+}
+
+get_env_file_value() {
+  local key="$1"
+  if [ ! -f "$ENV_FILE" ]; then
+    return 0
+  fi
+  python3 - "$ENV_FILE" "$key" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+key = sys.argv[2]
+for line in path.read_text(encoding="utf-8").splitlines():
+    if line.startswith(f"{key}="):
+        print(line.split("=", 1)[1])
+        break
+PY
+}
+
+preview_secret() {
+  local value="$1"
+  local length="${#value}"
+  if [ "$length" -le 8 ]; then
+    printf 'saved'
+  else
+    printf '%s...%s' "${value:0:4}" "${value: -4}"
+  fi
+}
+
 prompt_env_value() {
   local key="$1"
   local prompt="$2"
@@ -107,6 +152,39 @@ prompt_env_value() {
     log "$key already set in current shell"
     update_env "$key" "$current_value"
     return 0
+  fi
+
+  local env_file_value=""
+  env_file_value="$(get_env_file_value "$key")"
+  if [ -n "$env_file_value" ]; then
+    local display_value="saved value"
+    if [ "$secret" = "true" ]; then
+      display_value="$(preview_secret "$env_file_value")"
+    else
+      display_value="$env_file_value"
+    fi
+
+    printf '\n'
+    hint "$key already exists in .env: $display_value"
+    local existing_choice
+    existing_choice="$(choose_option "Choose how to handle $key:" \
+      "Use existing value from .env" \
+      "Replace with a new value" \
+      "Clear saved value and continue without it")"
+    case "$existing_choice" in
+      1)
+        export "$key=$env_file_value"
+        ok "Using existing $key from .env"
+        return 0
+        ;;
+      2)
+        ;;
+      3)
+        clear_env_key "$key"
+        warn "$key removed from .env"
+        return 0
+        ;;
+    esac
   fi
 
   local value=""

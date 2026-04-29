@@ -20,6 +20,9 @@ class InstallScriptTests(unittest.TestCase):
         self.assertIn("Select your primary AI backend for this machine", text)
         self.assertIn("Claude CLI", text)
         self.assertIn("LLM API key only", text)
+        self.assertIn("Use existing value from .env", text)
+        self.assertIn("Replace with a new value", text)
+        self.assertIn("Clear saved value and continue without it", text)
 
     def test_remote_bootstrap_script_exists(self) -> None:
         script = Path("scripts/bootstrap.sh")
