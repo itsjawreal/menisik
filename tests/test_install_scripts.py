@@ -16,7 +16,7 @@ class InstallScriptTests(unittest.TestCase):
         self.assertIn("gh auth login", text)
         self.assertIn("GITHUB_TOKEN", text)
         self.assertIn("OPENAI_API_KEY", text)
-        self.assertIn("codex --login", text)
+        self.assertIn("codex login", text)
         self.assertIn("Select your primary AI backend for this machine", text)
         self.assertIn("Claude CLI", text)
         self.assertIn("LLM API key only", text)

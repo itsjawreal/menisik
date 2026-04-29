@@ -244,7 +244,7 @@ configure_codex_backend() {
       ;;
     2)
       if has_cmd codex; then
-        codex --login
+        codex login
       else
         warn "Codex CLI is not installed yet, so interactive login was skipped"
       fi
