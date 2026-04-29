@@ -52,7 +52,8 @@ That setup flow can install:
 - the Python environment
 - `github-contribution-engine`
 - `contribution-mcp`
-- `~/.openclaw/skills/github-contribution-engine/SKILL.md`
+- `~/.openclaw/workspace/skills/github-contribution-engine/SKILL.md` when the OpenClaw workspace exists
+- fallback: `~/.openclaw/skills/github-contribution-engine/SKILL.md`
 - `~/.openclaw/tools/contribution.py`
 
 ## OpenClaw MCP Config
@@ -82,8 +83,11 @@ This repo also supports a native OpenClaw wrapper path, modeled after `wallet-mc
 
 Installed files:
 
-- `~/.openclaw/skills/github-contribution-engine/SKILL.md`
+- preferred: `~/.openclaw/workspace/skills/github-contribution-engine/SKILL.md`
+- fallback: `~/.openclaw/skills/github-contribution-engine/SKILL.md`
 - `~/.openclaw/tools/contribution.py`
+
+The installed `SKILL.md` now uses the official OpenClaw YAML frontmatter format so gateway skill discovery matches the current OpenClaw docs.
 
 The native wrapper is useful when your Telegram / Discord / OpenClaw agent behaves like a general chat assistant instead of calling MCP tools directly.
 

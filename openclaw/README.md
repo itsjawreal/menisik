@@ -5,7 +5,8 @@ skill and wrapper for the GitHub Contribution Engine.
 
 Installed assets land in the operator home directory:
 
-- `~/.openclaw/skills/github-contribution-engine/SKILL.md`
+- preferred: `~/.openclaw/workspace/skills/github-contribution-engine/SKILL.md`
+- fallback: `~/.openclaw/skills/github-contribution-engine/SKILL.md`
 - `~/.openclaw/tools/contribution.py`
 
 The supported installer path is:

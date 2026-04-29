@@ -593,7 +593,7 @@ main() {
   fi
   todo "Run: github-contribution-engine --doctor"
   todo "Run: contribution-mcp"
-  todo "In OpenClaw, use the installed skill at ~/.openclaw/skills/github-contribution-engine/SKILL.md"
+  todo "In OpenClaw, use the installed skill at ~/.openclaw/workspace/skills/github-contribution-engine/SKILL.md when the workspace exists."
 }
 
 main "$@"

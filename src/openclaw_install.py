@@ -23,12 +23,27 @@ def _openclaw_root(explicit: str | None = None) -> Path:
     return Path.home() / ".openclaw"
 
 
-def _skill_text(tool_path: str, invoke: str) -> str:
-    return f"""# SKILL: github-contribution-engine
-description: Acceptance-first GitHub contribution engine. Executes health checks, reports, repo inspection, and safe contribution flows.
-version: 1.0.0
-tool_path: {tool_path}
-invoke: {invoke}
+def _workspace_skill_root(explicit: str | None = None, openclaw_root: str | None = None) -> Path:
+    if explicit:
+        explicit_path = Path(explicit).expanduser()
+        if explicit_path.name == "skills":
+            return explicit_path
+        return explicit_path / "skills"
+    if os.environ.get("OPENCLAW_WORKSPACE"):
+        return Path(os.environ["OPENCLAW_WORKSPACE"]).expanduser() / "skills"
+    home_root = _openclaw_root(openclaw_root)
+    workspace_root = home_root / "workspace" / "skills"
+    if workspace_root.parent.exists():
+        return workspace_root
+    return home_root / "skills"
+
+
+def _skill_text(invoke: str) -> str:
+    return f"""---
+name: github-contribution-engine
+description: Use the local GitHub Contribution Engine wrapper to run health checks, show contribution reports, inspect repos, and execute safe contribution workflows from OpenClaw.
+metadata: {{"openclaw": {{"requires": {{"bins": ["python3"]}}}}}}
+---
 
 ## EXECUTION RULES — Read this first, every time
 
@@ -46,6 +61,7 @@ Do NOT claim success without the real tool output.
 
 ## Commands
 
+- wrapper invoke: `{invoke}`
 - health check: `doctor`
 - latest contribution report: `contrib_report`
 - inspect one repo: `repo_inspect --repo owner/repo`
@@ -180,10 +196,11 @@ def install_openclaw_assets(
     engine_bin: str,
     python_bin: str,
     openclaw_root: str | None = None,
+    openclaw_workspace: str | None = None,
 ) -> tuple[Path, Path]:
     root = _openclaw_root(openclaw_root)
     tools_dir = root / "tools"
-    skill_dir = root / "skills" / "github-contribution-engine"
+    skill_dir = _workspace_skill_root(openclaw_workspace, openclaw_root) / "github-contribution-engine"
     tools_dir.mkdir(parents=True, exist_ok=True)
     skill_dir.mkdir(parents=True, exist_ok=True)
 
@@ -200,7 +217,7 @@ def install_openclaw_assets(
     normalized_tool = _normalize_path(tool_path)
     invoke = f"{_quote(normalized_python)} {_quote(normalized_tool)}"
     skill_path.write_text(
-        _skill_text(tool_path=_normalize_path(tool_path), invoke=invoke),
+        _skill_text(invoke=invoke),
         encoding="utf-8",
     )
     return skill_path, tool_path
@@ -213,6 +230,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--engine-bin", required=True, help="Absolute path to github-contribution-engine executable.")
     parser.add_argument("--python-bin", required=True, help="Absolute path to the Python interpreter OpenClaw should use.")
     parser.add_argument("--openclaw-root", default="", help="Optional override for the OpenClaw home directory.")
+    parser.add_argument("--openclaw-workspace", default="", help="Optional override for the OpenClaw workspace directory that should receive workspace skills.")
     return parser
 
 
@@ -222,6 +240,7 @@ def main() -> int:
         engine_bin=args.engine_bin,
         python_bin=args.python_bin,
         openclaw_root=args.openclaw_root or None,
+        openclaw_workspace=args.openclaw_workspace or None,
     )
     print(f"Installed OpenClaw skill: {skill_path}")
     print(f"Installed OpenClaw wrapper: {tool_path}")

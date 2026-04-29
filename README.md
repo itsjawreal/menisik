@@ -143,7 +143,8 @@ curl -fsSL https://raw.githubusercontent.com/BigNounce90/github-contribution-eng
 
 The guided setup can also install a native OpenClaw skill + wrapper in one flow:
 
-- `~/.openclaw/skills/github-contribution-engine/SKILL.md`
+- `~/.openclaw/workspace/skills/github-contribution-engine/SKILL.md` when the OpenClaw workspace exists
+- fallback: `~/.openclaw/skills/github-contribution-engine/SKILL.md`
 - `~/.openclaw/tools/contribution.py`
 
 What the bootstrap script does:
