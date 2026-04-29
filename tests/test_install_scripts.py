@@ -27,7 +27,9 @@ class InstallScriptTests(unittest.TestCase):
         self.assertIn("Install OpenClaw skill and wrapper now?", text)
         self.assertIn("src/openclaw_install.py", text)
         self.assertIn("venv_activate_script", text)
-        self.assertIn("Use arrow keys, then press Enter.", text)
+        self.assertIn("Use arrow keys to move. Press Enter to select.", text)
+        self.assertIn("printf '%s' \"${options[0]}\"", text)
+        self.assertNotIn("printf '%s' \"1\"", text)
 
     def test_remote_bootstrap_script_exists(self) -> None:
         script = Path("scripts/bootstrap.sh")

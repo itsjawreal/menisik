@@ -5,6 +5,19 @@ import os
 from pathlib import Path
 
 
+def _unique_paths(paths: list[Path]) -> list[Path]:
+    seen: set[str] = set()
+    unique: list[Path] = []
+    for path in paths:
+        expanded = path.expanduser()
+        key = str(expanded)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(expanded)
+    return unique
+
+
 def _normalize_path(value: str | Path) -> str:
     return str(Path(value)).replace("\\", "/")
 
@@ -23,6 +36,20 @@ def _openclaw_root(explicit: str | None = None) -> Path:
     return Path.home() / ".openclaw"
 
 
+def _openclaw_roots(explicit: str | None = None) -> list[Path]:
+    if explicit:
+        explicit_path = Path(explicit).expanduser()
+        roots = [explicit_path]
+        if explicit_path.name.startswith("."):
+            roots.append(explicit_path.with_name(explicit_path.name[1:]))
+        return _unique_paths(roots)
+    roots: list[Path] = []
+    if os.environ.get("OPENCLAW_HOME"):
+        roots.append(Path(os.environ["OPENCLAW_HOME"]).expanduser())
+    roots.extend([Path.home() / ".openclaw", Path.home() / "openclaw"])
+    return _unique_paths(roots)
+
+
 def _workspace_skill_root(explicit: str | None = None, openclaw_root: str | None = None) -> Path:
     if explicit:
         explicit_path = Path(explicit).expanduser()
@@ -31,11 +58,21 @@ def _workspace_skill_root(explicit: str | None = None, openclaw_root: str | None
         return explicit_path / "skills"
     if os.environ.get("OPENCLAW_WORKSPACE"):
         return Path(os.environ["OPENCLAW_WORKSPACE"]).expanduser() / "skills"
-    home_root = _openclaw_root(openclaw_root)
-    workspace_root = home_root / "workspace" / "skills"
-    if workspace_root.parent.exists():
-        return workspace_root
-    return home_root / "skills"
+    for home_root in _openclaw_roots(openclaw_root):
+        workspace_root = home_root / "workspace" / "skills"
+        if workspace_root.parent.exists():
+            return workspace_root
+    return _openclaw_root(openclaw_root) / "skills"
+
+
+def _all_skill_roots(explicit: str | None = None, openclaw_root: str | None = None) -> list[Path]:
+    if explicit or os.environ.get("OPENCLAW_WORKSPACE"):
+        return [_workspace_skill_root(explicit, openclaw_root)]
+    roots: list[Path] = []
+    for home_root in _openclaw_roots(openclaw_root):
+        roots.append(home_root / "workspace" / "skills")
+        roots.append(home_root / "skills")
+    return _unique_paths(roots)
 
 
 def _skill_text(invoke: str) -> str:
@@ -58,6 +95,14 @@ For natural-language chat requests, prefer `message --text "..."` so the contrib
 **Rule 3 - Show exact output first.**
 Paste the exact stdout from the wrapper before any short explanation.
 Do NOT claim success without the real tool output.
+
+**Rule 4 - No assistant filler.**
+Do NOT say "Got it", "Let me check", or "Would you like me to proceed?" before running the wrapper.
+Do NOT replace wrapper tables with emoji summaries or prose paraphrases.
+
+**Rule 5 - No numbered menus for supported actions.**
+Do NOT answer with choices like `1`, `2`, or `3` when a supported wrapper command already exists.
+Run the command, return the exact stdout, then add at most one short next-step sentence if needed.
 
 ## Commands
 
@@ -205,29 +250,32 @@ def install_openclaw_assets(
     openclaw_root: str | None = None,
     openclaw_workspace: str | None = None,
 ) -> tuple[Path, Path]:
-    root = _openclaw_root(openclaw_root)
-    tools_dir = root / "tools"
-    skill_dir = _workspace_skill_root(openclaw_workspace, openclaw_root) / "github-contribution-engine"
-    tools_dir.mkdir(parents=True, exist_ok=True)
-    skill_dir.mkdir(parents=True, exist_ok=True)
-
-    tool_path = tools_dir / "contribution.py"
-    skill_path = skill_dir / "SKILL.md"
-
-    tool_path.write_text(_wrapper_text(_normalize_path(engine_bin)), encoding="utf-8")
-    try:
-        tool_path.chmod(0o755)
-    except OSError:
-        pass
-
+    roots = _openclaw_roots(openclaw_root)
+    skill_roots = _all_skill_roots(openclaw_workspace, openclaw_root)
+    primary_root = roots[0]
+    primary_tool_path = primary_root / "tools" / "contribution.py"
+    primary_skill_path = skill_roots[0] / "github-contribution-engine" / "SKILL.md"
     normalized_python = _normalize_path(python_bin)
-    normalized_tool = _normalize_path(tool_path)
-    invoke = f"{_quote(normalized_python)} {_quote(normalized_tool)}"
-    skill_path.write_text(
-        _skill_text(invoke=invoke),
-        encoding="utf-8",
-    )
-    return skill_path, tool_path
+    normalized_engine = _normalize_path(engine_bin)
+
+    for root in roots:
+        tool_path = root / "tools" / "contribution.py"
+        tool_path.parent.mkdir(parents=True, exist_ok=True)
+        tool_path.write_text(_wrapper_text(normalized_engine), encoding="utf-8")
+        try:
+            tool_path.chmod(0o755)
+        except OSError:
+            pass
+
+    for skill_root in skill_roots:
+        skill_dir = skill_root / "github-contribution-engine"
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        matching_root = next((root for root in roots if skill_root.is_relative_to(root)), primary_root)
+        matching_tool = matching_root / "tools" / "contribution.py"
+        invoke = f"{_quote(normalized_python)} {_quote(_normalize_path(matching_tool))}"
+        (skill_dir / "SKILL.md").write_text(_skill_text(invoke=invoke), encoding="utf-8")
+
+    return primary_skill_path, primary_tool_path
 
 
 def build_parser() -> argparse.ArgumentParser:

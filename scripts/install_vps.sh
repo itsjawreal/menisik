@@ -216,14 +216,14 @@ prompt_env_value() {
       "Replace with a new value" \
       "Clear saved value and continue without it")"
     case "$existing_choice" in
-      1)
+      "Use existing value from .env")
         export "$key=$env_file_value"
         ok "Using existing $key from .env"
         return 0
         ;;
-      2)
+      "Replace with a new value")
         ;;
-      3)
+      "Clear saved value and continue without it")
         clear_env_key "$key"
         warn "$key removed from .env"
         return 0
@@ -265,47 +265,64 @@ choose_option() {
   local selected=0
   local key=""
   local line_count="${#options[@]}"
+  local tty_device="/dev/tty"
+  local longest="${#prompt}"
+  local option=""
 
-  if [ ! -t 0 ] || [ ! -t 1 ] || [ -n "${CI:-}" ]; then
+  for option in "${options[@]}"; do
+    if [ "${#option}" -gt "$longest" ]; then
+      longest="${#option}"
+    fi
+  done
+  local panel_width=$((longest + 8))
+  local panel_border="+$(printf '%*s' "$panel_width" '' | tr ' ' '-')+"
+
+  if [ -n "${CI:-}" ] || [ ! -r "$tty_device" ] || [ ! -w "$tty_device" ]; then
     printf '%s%s%s\n' "$C_BOLD" "$prompt" "$C_RESET" >&2
     for option in "${options[@]}"; do
       printf '  - %s\n' "$option" >&2
     done
-    printf '%s' "1"
+    printf '%s' "${options[0]}"
     return 0
   fi
 
   _render_option_picker() {
     local current="$1"
-    printf '\r' >&2
+    printf '\r' >"$tty_device"
     for _ in $(seq 1 "$line_count"); do
-      printf '\033[1A\033[2K' >&2
+      printf '\033[1A\033[2K' >"$tty_device"
     done
-    printf '%s%s%s\n' "$C_BOLD" "$prompt" "$C_RESET" >&2
+    printf '%s%s%s\n' "$C_BOLD" "$prompt" "$C_RESET" >"$tty_device"
+    printf '%s\n' "$panel_border" >"$tty_device"
     local idx=0
     for option in "${options[@]}"; do
       if [ "$idx" -eq "$current" ]; then
-        printf '  %s›%s %s%s%s\n' "$C_GREEN" "$C_RESET" "$C_BOLD" "$option" "$C_RESET" >&2
+        printf '| %s›%s %s%s%s%*s |\n' \
+          "$C_GREEN" "$C_RESET" "$C_BOLD" "$option" "$C_RESET" \
+          $((panel_width - ${#option} - 4)) "" >"$tty_device"
       else
-        printf '   %s\n' "$option" >&2
+        printf '|   %s%*s |\n' \
+          "$option" \
+          $((panel_width - ${#option} - 4)) "" >"$tty_device"
       fi
       idx=$((idx + 1))
     done
-    printf '%s[hint]%s Use arrow keys, then press Enter.\n' "$C_MAGENTA" "$C_RESET" >&2
+    printf '%s\n' "$panel_border" >"$tty_device"
+    printf '%s[hint]%s Use arrow keys to move. Press Enter to select.\n' "$C_MAGENTA" "$C_RESET" >"$tty_device"
   }
 
-  line_count=$((line_count + 2))
+  line_count=$((line_count + 4))
   _render_option_picker "$selected"
   while true; do
-    IFS= read -rsn1 key
+    IFS= read -rsn1 key <"$tty_device"
     case "$key" in
       "")
-        printf '%s' "$((selected + 1))"
-        printf '\n' >&2
+        printf '%s' "${options[$selected]}"
+        printf '\n' >"$tty_device"
         return 0
         ;;
       $'\x1b')
-        IFS= read -rsn2 key || true
+        IFS= read -rsn2 key <"$tty_device" || true
         case "$key" in
           "[A")
             if [ "$selected" -gt 0 ]; then
@@ -432,14 +449,14 @@ configure_codex_backend() {
       "Save OPENAI_API_KEY instead" \
       "Re-run Codex login flow")"
     case "$existing_auth_choice" in
-      1)
+      "Keep the existing Codex login")
         return 0
         ;;
-      2)
+      "Save OPENAI_API_KEY instead")
         prompt_env_value "OPENAI_API_KEY" "Enter OPENAI_API_KEY (input hidden):" true
         return 0
         ;;
-      3)
+      "Re-run Codex login flow")
         ;;
     esac
   fi
@@ -451,10 +468,10 @@ configure_codex_backend() {
     "Run browser-based codex login" \
     "Skip Codex auth for now")"
   case "$auth_choice" in
-    1)
+    "Save OPENAI_API_KEY")
       prompt_env_value "OPENAI_API_KEY" "Enter OPENAI_API_KEY (input hidden):" true
       ;;
-    2)
+    "Run Codex device auth (recommended for VPS/headless)")
       if has_cmd codex; then
         printf '\n'
         hint "Starting Codex device auth."
@@ -471,7 +488,7 @@ configure_codex_backend() {
         warn "Codex CLI is not installed yet, so device auth was skipped"
       fi
       ;;
-    3)
+    "Run browser-based codex login")
       if has_cmd codex; then
         printf '\n'
         hint "Starting browser-based Codex login."
@@ -488,7 +505,7 @@ configure_codex_backend() {
         warn "Codex CLI is not installed yet, so browser login was skipped"
       fi
       ;;
-    4)
+    "Skip Codex auth for now")
       warn "Skipping Codex auth"
       ;;
   esac
@@ -518,19 +535,19 @@ configure_api_key_backend() {
     "OpenRouter" \
     "Other / custom provider")"
   case "$provider_choice" in
-    1)
+    "OpenAI / GPT")
       update_env "MODEL_SERIES" "GPT"
       prompt_env_value "OPENAI_API_KEY" "Enter OPENAI_API_KEY (input hidden):" true
       ;;
-    2)
+    "Anthropic / Claude")
       update_env "MODEL_SERIES" "Claude"
       prompt_env_value "ANTHROPIC_API_KEY" "Enter ANTHROPIC_API_KEY (input hidden):" true
       ;;
-    3)
+    "OpenRouter")
       update_env "MODEL_SERIES" "Other"
       prompt_env_value "OPENROUTER_API_KEY" "Enter OPENROUTER_API_KEY (input hidden):" true
       ;;
-    4)
+    "Other / custom provider")
       update_env "MODEL_SERIES" "Other"
       warn "Custom provider selected. Save provider-specific env vars manually if needed."
       ;;
@@ -617,10 +634,10 @@ main() {
     "LLM API key only" \
     "Skip backend setup for now")"
   case "$backend_choice" in
-    1) configure_codex_backend ;;
-    2) configure_claude_backend ;;
-    3) configure_api_key_backend ;;
-    4) warn "Skipping backend setup for now" ;;
+    "Codex CLI") configure_codex_backend ;;
+    "Claude CLI") configure_claude_backend ;;
+    "LLM API key only") configure_api_key_backend ;;
+    "Skip backend setup for now") warn "Skipping backend setup for now" ;;
   esac
 
   section "OpenClaw integration"

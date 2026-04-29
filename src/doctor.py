@@ -19,10 +19,18 @@ from src.config import (
     TELEGRAM_TOKEN,
 )
 
-OPENCLAW_ROOT = Path(os.getenv("OPENCLAW_HOME", "~/.openclaw")).expanduser()
-OPENCLAW_WORKSPACE_SKILL = OPENCLAW_ROOT / "workspace" / "skills" / "github-contribution-engine" / "SKILL.md"
-OPENCLAW_SHARED_SKILL = OPENCLAW_ROOT / "skills" / "github-contribution-engine" / "SKILL.md"
-OPENCLAW_WRAPPER = OPENCLAW_ROOT / "tools" / "contribution.py"
+OPENCLAW_ROOTS = [
+    Path(os.getenv("OPENCLAW_HOME", "~/.openclaw")).expanduser(),
+    Path("~/openclaw").expanduser(),
+]
+OPENCLAW_SKILL_CANDIDATES = [
+    root / "workspace" / "skills" / "github-contribution-engine" / "SKILL.md"
+    for root in OPENCLAW_ROOTS
+] + [
+    root / "skills" / "github-contribution-engine" / "SKILL.md"
+    for root in OPENCLAW_ROOTS
+]
+OPENCLAW_WRAPPER_CANDIDATES = [root / "tools" / "contribution.py" for root in OPENCLAW_ROOTS]
 
 
 @dataclass
@@ -245,11 +253,7 @@ def collect_doctor_checks() -> list[DoctorCheck]:
         )
     )
 
-    openclaw_skill_path = ""
-    if OPENCLAW_WORKSPACE_SKILL.exists():
-        openclaw_skill_path = str(OPENCLAW_WORKSPACE_SKILL)
-    elif OPENCLAW_SHARED_SKILL.exists():
-        openclaw_skill_path = str(OPENCLAW_SHARED_SKILL)
+    openclaw_skill_path = next((str(path) for path in OPENCLAW_SKILL_CANDIDATES if path.exists()), "")
     checks.append(
         DoctorCheck(
             "openclaw-skill",
@@ -260,8 +264,11 @@ def collect_doctor_checks() -> list[DoctorCheck]:
     checks.append(
         DoctorCheck(
             "openclaw-wrapper",
-            "ok" if OPENCLAW_WRAPPER.exists() else "warn",
-            str(OPENCLAW_WRAPPER) if OPENCLAW_WRAPPER.exists() else "OpenClaw wrapper not installed at ~/.openclaw/tools/contribution.py",
+            "ok" if any(path.exists() for path in OPENCLAW_WRAPPER_CANDIDATES) else "warn",
+            next(
+                (str(path) for path in OPENCLAW_WRAPPER_CANDIDATES if path.exists()),
+                "OpenClaw wrapper not installed under ~/.openclaw/tools or ~/openclaw/tools",
+            ),
         )
     )
 
