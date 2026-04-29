@@ -49,8 +49,16 @@ ok() {
   printf '%s[ok]%s %s\n' "$C_GREEN" "$C_RESET" "$1"
 }
 
+hint() {
+  printf '%s[hint]%s %s\n' "$C_MAGENTA" "$C_RESET" "$1"
+}
+
 has_cmd() {
   command -v "$1" >/dev/null 2>&1
+}
+
+is_headless_environment() {
+  [ -n "${SSH_CONNECTION:-}" ] || [ -n "${SSH_TTY:-}" ] || [ -z "${DISPLAY:-}" ]
 }
 
 python_has_venv() {
@@ -233,10 +241,23 @@ configure_codex_backend() {
   update_env "MODEL_SERIES" "GPT"
   install_codex_if_requested
 
+  printf '\n'
+  printf '%sCodex sign-in help%s\n' "$C_BOLD" "$C_RESET"
+  if is_headless_environment; then
+    hint "VPS / headless environment detected."
+    hint "Recommended option: device auth."
+    hint "Codex will show a URL and a short code. Open that URL from your local browser, complete sign-in, then return here."
+    hint "Avoid localhost browser login on a remote VPS unless you have SSH port forwarding configured."
+  else
+    hint "Local machine detected."
+    hint "Browser login is usually fine here. If it fails, rerun setup and choose device auth instead."
+  fi
+
   local auth_choice
   auth_choice="$(choose_option "Select how to prepare Codex:" \
     "Save OPENAI_API_KEY" \
-    "Run interactive codex login" \
+    "Run Codex device auth (recommended for VPS/headless)" \
+    "Run browser-based codex login" \
     "Skip Codex auth for now")"
   case "$auth_choice" in
     1)
@@ -244,12 +265,27 @@ configure_codex_backend() {
       ;;
     2)
       if has_cmd codex; then
-        codex login
+        printf '\n'
+        hint "Starting Codex device auth."
+        hint "You will get a verification URL and code."
+        hint "Open the URL from your local browser, finish login, then come back to this VPS terminal."
+        codex login --device-auth
       else
-        warn "Codex CLI is not installed yet, so interactive login was skipped"
+        warn "Codex CLI is not installed yet, so device auth was skipped"
       fi
       ;;
     3)
+      if has_cmd codex; then
+        printf '\n'
+        hint "Starting browser-based Codex login."
+        hint "This works best on a local machine with direct browser access."
+        hint "If localhost fails on a VPS, rerun setup and choose device auth instead."
+        codex login
+      else
+        warn "Codex CLI is not installed yet, so browser login was skipped"
+      fi
+      ;;
+    4)
       warn "Skipping Codex auth"
       ;;
   esac
