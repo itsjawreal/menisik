@@ -65,6 +65,17 @@ def _masked_present(value: str) -> str:
     return "set" if value.strip() else "missing"
 
 
+def _codex_auth_ready() -> tuple[bool, str]:
+    if os.getenv("OPENAI_API_KEY", "").strip():
+        return True, "OPENAI_API_KEY is set"
+    if not _command_exists(CODEX_CMD):
+        return False, "Codex CLI not installed"
+    ok, detail = _run_command([CODEX_CMD, "login", "status"])
+    if ok:
+        return True, detail.splitlines()[0] if detail else "Codex login is active"
+    return False, detail.splitlines()[0] if detail else "Codex login not ready"
+
+
 def collect_doctor_checks() -> list[DoctorCheck]:
     checks: list[DoctorCheck] = []
     runtime = get_runtime_profile()
@@ -146,6 +157,14 @@ def collect_doctor_checks() -> list[DoctorCheck]:
     )
 
     selected_backend_ok = claude_ok if runtime.backend == "claude-cli" else codex_ok
+    codex_auth_ok, codex_auth_detail = _codex_auth_ready()
+    checks.append(
+        DoctorCheck(
+            "codex-auth",
+            "ok" if codex_auth_ok else "warn",
+            codex_auth_detail,
+        )
+    )
     checks.append(
         DoctorCheck(
             "agent-runtime",
@@ -153,11 +172,23 @@ def collect_doctor_checks() -> list[DoctorCheck]:
             f"agent_tool={runtime.agent_tool} backend={runtime.backend} support={runtime.support_level}",
         )
     )
+    selected_backend_auth_ok = True
+    selected_backend_auth_detail = "selected backend auth looks ready"
+    if runtime.backend == "codex-cli":
+        selected_backend_auth_ok = codex_auth_ok
+        selected_backend_auth_detail = codex_auth_detail
     checks.append(
         DoctorCheck(
             "selected-backend",
             "ok" if selected_backend_ok else "fail",
             f"{runtime.backend} {'available' if selected_backend_ok else 'not found'} for the active runtime path",
+        )
+    )
+    checks.append(
+        DoctorCheck(
+            "selected-backend-auth",
+            "ok" if selected_backend_auth_ok else "warn",
+            selected_backend_auth_detail,
         )
     )
 
@@ -256,10 +287,13 @@ def build_doctor_report() -> str:
 
     gh_ready = any(check.name == "github-auth" and check.status == "ok" for check in checks)
     ai_ready = any(check.name in {"codex-cli", "claude-cli"} and check.status == "ok" for check in checks)
-    if gh_ready and ai_ready:
+    selected_auth_ready = any(check.name == "selected-backend-auth" and check.status == "ok" for check in checks)
+    if gh_ready and ai_ready and selected_auth_ready:
         lines.append("- Ready for full contribution runs, including PR submission.")
-    elif ai_ready:
+    elif ai_ready and selected_auth_ready:
         lines.append("- Ready for local generation and inspect flows, but GitHub auth still needs attention.")
+    elif ai_ready:
+        lines.append("- Backend CLI is installed, but authentication is incomplete for the active runtime.")
     else:
         lines.append("- Not ready for contribution generation until at least one supported AI CLI is available.")
 
@@ -277,6 +311,8 @@ def build_doctor_report() -> str:
             actions.append("Replace user-specific absolute CLI paths in `.env` with PATH-based commands for portability.")
         elif check.name == "github-token" and check.status != "ok":
             actions.append("Add `GITHUB_TOKEN` if you want the engine to make authenticated GitHub API calls.")
+        elif check.name == "codex-auth" and check.status != "ok":
+            actions.append("Finish Codex authentication with `codex login --device-auth`, `codex login`, or set `OPENAI_API_KEY`.")
 
     if actions:
         lines.extend(["", "Recommended actions:"])

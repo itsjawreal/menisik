@@ -269,7 +269,13 @@ configure_codex_backend() {
         hint "Starting Codex device auth."
         hint "You will get a verification URL and code."
         hint "Open the URL from your local browser, finish login, then come back to this VPS terminal."
-        codex login --device-auth
+        if codex login --device-auth; then
+          ok "Codex device auth completed"
+        else
+          warn "Codex device auth did not complete."
+          hint "If you pressed Ctrl+C or the flow failed, rerun setup and choose this option again."
+          hint "You can also use OPENAI_API_KEY instead of interactive login."
+        fi
       else
         warn "Codex CLI is not installed yet, so device auth was skipped"
       fi
@@ -280,7 +286,13 @@ configure_codex_backend() {
         hint "Starting browser-based Codex login."
         hint "This works best on a local machine with direct browser access."
         hint "If localhost fails on a VPS, rerun setup and choose device auth instead."
-        codex login
+        if codex login; then
+          ok "Codex browser login completed"
+        else
+          warn "Codex browser login did not complete."
+          hint "On a VPS, choose device auth instead of browser login."
+          hint "You can also use OPENAI_API_KEY instead of interactive login."
+        fi
       else
         warn "Codex CLI is not installed yet, so browser login was skipped"
       fi
