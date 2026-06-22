@@ -41,3 +41,6 @@ venv/
 
 # cross-platform editor / filesystem residue
 *:Zone.Identifier
+
+# build artifact, do not track
+*.zip
