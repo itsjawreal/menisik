@@ -2,21 +2,30 @@
 
 [![CI](https://github.com/BigNounce90/rover/actions/workflows/ci.yml/badge.svg)](https://github.com/BigNounce90/rover/actions/workflows/ci.yml)
 
-> Autonomous GitHub contribution agent — scans repos, forges patches, submits PRs, and learns from outcomes.
+> A learning project: a GitHub contribution engine that scans repos, drafts focused patches, runs them through quality gates, and leaves the submit decision to a human.
 
-Rover is a full autonomous agent for finding, verifying, submitting, tracking, and learning from GitHub pull requests.
+Rover is a personal learning project exploring whether an AI engine can find and prepare narrow open-source contributions. It is **not** a production-ready autonomous contributor — see [Honest status](#honest-status) below.
 
 ## What It Does
 
 - Discovers active open-source repositories worth contributing to.
-- Scans code locally for narrow, evidence-backed contribution opportunities.
+- Scans code locally for candidate contribution opportunities.
 - Qualifies opportunities before spending AI calls.
-- Uses Claude CLI or Codex CLI as the AI backend to produce focused patches and PR bodies (configurable via `AI_BACKEND` in `.env`).
-- Submits PRs through GitHub CLI.
+- Uses an AI backend to draft focused patches and PR bodies: Codex or Claude CLI, or an OpenAI-compatible API (OpenRouter, etc.) — configurable via `AI_BACKEND` in `.env`.
+- Can submit PRs through GitHub CLI (best used with `--dry-run` / human review first).
 - Tracks PR lifecycle, maintainer feedback, rejections, queue state, and run summaries in SQLite.
-- Learns from outcomes so repeated weak targets are deprioritized.
+- Adjusts repo scoring and cooldowns from past outcomes.
 
-The engine optimizes for contribution quality over contribution count. It should behave like a careful contributor, not a PR spam bot.
+## Honest status
+
+This README aims to describe what the engine actually does, not what it aspires to:
+
+- ✅ The quality gates reliably **reject** unsafe, behavior-changing, or overly broad patches.
+- ⚠️ A patch that **passes** the gates is not guaranteed to fix a real bug. The gates check safety, scope, and behavior-preservation — they cannot verify that the underlying problem is genuine, so the engine can produce plausible-but-speculative patches.
+- ⚠️ It does **not** reliably produce merge-ready PRs unattended. Treat it as a drafting assistant: read every diff and confirm the bug is real before submitting.
+- "Learns from outcomes" means simple repo scoring and cooldowns, not sophisticated learning.
+
+The goal is contribution quality over volume — behave like a careful contributor, not a PR spam bot. That is the bar; reaching it consistently is still a work in progress.
 
 ## Main Commands
 
@@ -358,8 +367,8 @@ Current portability status:
 
 - Codex CLI is the default tested path.
 - Claude CLI is a supported fallback path.
+- An OpenAI-compatible API backend (OpenRouter and similar) is supported via `AI_BACKEND=openrouter`, so a CLI is not required.
 - Other agent-tool labels are documentation/demo metadata until a real backend adapter exists.
-- API-key-only LLM operation is not implemented yet, so users without a supported CLI backend will currently be blocked.
 
 ## MCP Server
 

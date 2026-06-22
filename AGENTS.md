@@ -1,10 +1,10 @@
 # Context - GitHub Contribution Engine
 
-This repo is dedicated to one product: autonomous GitHub contribution engine.
+This repo is dedicated to one product: a GitHub contribution engine. It is a learning project, not a production-ready autonomous contributor — generated patches need human review before submission (the quality gates reject unsafe changes but cannot verify a bug is real).
 
 ## Mission
 
-Build contribution engine that behaves like careful open-source contributor:
+Build a contribution engine that behaves like a careful open-source contributor:
 
 - find suitable repositories
 - identify narrow evidence-backed opportunities

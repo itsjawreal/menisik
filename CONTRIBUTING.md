@@ -21,7 +21,7 @@ All tests must pass before submitting a PR. CI runs automatically on push.
 
 ## Code style
 
-- Python 3.11+, type hints on all public functions
+- Python 3.10+, type hints on all public functions
 - No comments explaining *what* the code does — only *why* when non-obvious
 - Patches should be narrow: one clear target, one concrete failure mode
 - No speculative hardening, no style-only changes
@@ -55,7 +55,7 @@ clear acceptance policy and a predictable verification path.
 ```
 app/builder.py          # CLI entry point
 src/
-  core/ai.py               # AI backend abstraction (Claude / Codex)
+  core/ai.py               # AI backend abstraction (Codex / Claude CLI, OpenRouter API)
   contrib/contribution_engine.py  # run orchestration
   contrib/contribution_store.py   # SQLite persistence
   contrib/opportunity_engine.py   # local pattern scanner

@@ -2,9 +2,11 @@
 
 ## 1. Purpose
 
-This repository exists to build and operate one product: an autonomous GitHub contribution engine.
+This repository exists to build and operate one product: a GitHub contribution engine. It is a learning project, not a production-ready autonomous contributor.
 
-The engine should behave like a careful open-source contributor. It should find suitable repositories, identify narrow evidence-backed opportunities, generate minimal patches, submit respectful pull requests, respond to maintainers, and learn from outcomes without creating maintainer burden.
+The engine should behave like a careful open-source contributor: find suitable repositories, identify narrow evidence-backed opportunities, generate minimal patches, and prepare respectful pull requests for human review before submission, responding to maintainers without creating maintainer burden.
+
+Honest limitation: the quality gates reliably reject unsafe, behavior-changing, or broad patches, but a patch that passes them is not guaranteed to fix a real bug — the gates cannot verify the underlying problem is genuine, so the engine can produce plausible-but-speculative patches. A human should confirm the bug is real and read the diff before any submission.
 
 This file is the primary source of truth for agent behavior in this repository. When another instruction source conflicts with this file, this file wins unless the operator explicitly says otherwise.
 

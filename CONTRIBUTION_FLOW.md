@@ -68,7 +68,7 @@ It must:
 - add or update tests when feasible
 - write a PR body tied to the evidence
 
-Codex CLI is the default backend for this step. Claude is fallback only.
+Codex CLI is the default backend for this step; Claude CLI is the fallback, and an OpenAI-compatible API (OpenRouter) is also supported.
 
 ## 5. Verify
 

@@ -25,6 +25,33 @@ OpenClaw is a documented integration target for operator-specific use.
 - use `route_command` first when the user speaks in natural language instead of canonical action names
 - prefer `contrib_once` and `contrib_targeted` over the lower-level `run_contribution` tool when the action is already known
 
+## AI Backend & Credentials — why Rover does not reuse OpenClaw's key
+
+Rover reads its own AI backend and API key from `.env` (`AI_BACKEND`,
+`OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_BASE_URL`). It deliberately
+does **not** pull credentials from OpenClaw. To be honest about the reasons:
+
+- **The key is not in `openclaw.json` to read.** OpenClaw keeps the real
+  OpenRouter key in its own credential store and leaves only a profile reference
+  in the config (`auth.profiles.openrouter:default` → `mode: api_key`, no key
+  value). The exact storage location varies by install and version, and it is
+  outside Rover's control — reaching into it would be brittle and undocumented.
+- **Rover runs standalone.** It works as a CLI, MCP server, cron job, and daemon
+  with no OpenClaw present. Coupling credentials to OpenClaw would break every
+  non-OpenClaw mode.
+- **Different roles, different models.** OpenClaw's model is its chat brain
+  (often a cheap/fast model); Rover's backend generates patches (a stronger
+  model). In practice the two use different OpenRouter models, so a shared config
+  would force the wrong model on one of them.
+
+This is a deliberate decoupling, not a missing feature. If you want a single key
+without duplicating it, share it through the environment rather than through
+OpenClaw's config:
+
+```bash
+export OPENROUTER_API_KEY=sk-or-...   # in ~/.bashrc / ~/.profile; both tools read it
+```
+
 ## Install Path
 
 Recommended install command:
