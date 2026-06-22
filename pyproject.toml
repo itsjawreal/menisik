@@ -1,7 +1,7 @@
 [project]
 name = "rover"
-version = "0.1.0"
-description = "Autonomous GitHub contribution agent — scans, patches, submits, and learns."
+version = "0.1.2"
+description = "Learning project: a GitHub contribution engine that drafts narrow patches through quality gates and leaves the submit decision to a human."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
