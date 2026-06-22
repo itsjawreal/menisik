@@ -1,6 +1,7 @@
 # secrets and local machine config
 .env
 .mcp.json
+.claude/settings.local.json
 
 # runtime state (temp files, not source)
 data/*.json
