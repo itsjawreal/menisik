@@ -77,12 +77,12 @@ Those two layers stay because they still protect real integrations, not just old
 
 Natural-language routing is also available for channel-style inputs:
 
-- `buat 1 kontribusi`
-- `jalankan 1 pr ke owner/repo`
-- `Rover, fix bug di owner/repo`
-- `Rover, update deps di owner/repo`
-- `buat satu pull request ke https://github.com/owner/repo`
-- `cek repo owner/repo dulu`
+- `make 1 contribution`
+- `run 1 pr to owner/repo`
+- `Rover, fix bug in owner/repo`
+- `Rover, update deps in owner/repo`
+- `create one pull request to https://github.com/owner/repo`
+- `check repo owner/repo first`
 
 These phrases are mapped to canonical engine actions like `contrib_once`, `contrib_targeted`, `repo_inspect`, `contrib_check`, and `doctor`.
 For safety, natural-language contribution requests default to preview mode unless the request explicitly asks for live submission.
@@ -90,7 +90,7 @@ For safety, natural-language contribution requests default to preview mode unles
 When a prompt is ambiguous or the repo slug is not in `owner/repo` format, Rover falls back to a safe `doctor` action at low confidence rather than guessing a target:
 
 ```
-# Input: "Rover, fix bug di repo-abc"
+# Input: "Rover, fix bug in repo-abc"
 INFO  Natural-language command mapped to action=doctor repo=<search> count=1 dry_run=True confidence=low
 INFO  [rationale] Repo token "repo-abc" does not match owner/repo format — skipping as target.
 INFO  [rationale] No unambiguous action inferred from prompt — defaulting to a safe doctor action.
@@ -99,7 +99,7 @@ INFO  [rationale] No unambiguous action inferred from prompt — defaulting to a
 Prompts that do resolve cleanly log at normal confidence:
 
 ```
-# Input: "Rover, fix bug di owner/repo"
+# Input: "Rover, fix bug in owner/repo"
 INFO  Natural-language command mapped to action=contrib_targeted repo=owner/repo count=1 dry_run=True confidence=high
 INFO  [rationale] Explicit repo slug matched: owner/repo.
 INFO  [rationale] Fix-intent keyword detected — mapped to contrib_targeted.

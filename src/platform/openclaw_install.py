@@ -77,8 +77,8 @@ metadata: {{"openclaw": {{"requires": {{"bins": ["python3"]}}}}}}
 - For `rover scan ...`, return Rover scan output only. Do not pivot into contribution recommendations, contribution-run suggestions, or "inspect already passed" summaries unless the user explicitly asks for next steps after the scan result.
 - For `rover scan ...`, never fall back to repo inspection, PR list fetching, or contribution workflow summaries just because the model is unsure. If routing is uncertain, call Rover and answer from its scan payload.
 - For `rover scan trust ...` and `rover scan audit ...`, do not claim that Python or TypeScript files are required. Trust and audit scans can still return repo-level trust signals for low-source or archive-heavy repos.
-- Treat `run ...` / `jalankan ...` contribution requests as live submission attempts unless the user explicitly asks for preview or dry-run.
-- Treat `preview ...`, `inspect ...`, and `cek repo ... dulu` as non-live actions.
+- Treat `run ...` contribution requests as live submission attempts unless the user explicitly asks for preview or dry-run.
+- Treat `preview ...`, `inspect ...`, and `check repo ... first` as non-live actions.
 - If a live Rover run is accepted, send one short acknowledgement with the `run_id` and stop there; do not continue with extra status chatter.
 - After a live Rover run starts, use only Rover status/result tools for follow-up. Do not improvise with `gh`, manual issue browsing, direct GitHub checks, or sandbox/tooling remediation unless the user explicitly asks for those.
 - Do not claim missing GitHub CLI, missing Python, MCP timeout, or similar environment problems if Rover already started a run or returned structured status.
@@ -113,8 +113,8 @@ metadata: {{"openclaw": {{"requires": {{"bins": ["python3"]}}}}}}
 - check maintainer feedback / PR state: `contrib_check`
 - respond to maintainer feedback: `contrib_respond`
 - test notification delivery: `test_notify`
-- route natural language safely: `route --text "buat 1 kontribusi"`
-- execute natural language request: `message --text "buat 1 kontribusi"`
+- route natural language safely: `route --text "make 1 contribution"`
+- execute natural language request: `message --text "make 1 contribution"`
 - explicit Rover prefix examples:
   - `rover profile`
   - `rover doctor`

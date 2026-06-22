@@ -9,22 +9,22 @@ from src.core.command_router import parse_command_text
 
 
 class CommandRouterTests(unittest.TestCase):
-    def test_maps_indonesian_contribution_request_to_search_mode(self) -> None:
-        request = parse_command_text("buat 1 kontribusi")
+    def test_maps_contribution_request_to_search_mode(self) -> None:
+        request = parse_command_text("make 1 contribution")
 
         self.assertEqual(request.action, "contrib_once")
         self.assertEqual(request.count, 1)
         self.assertTrue(request.dry_run)
 
     def test_maps_targeted_pull_request_phrase_to_repo_action(self) -> None:
-        request = parse_command_text("buat satu pull request ke https://github.com/HKUDS/Vibe-Trading")
+        request = parse_command_text("create one pull request to https://github.com/HKUDS/Vibe-Trading")
 
         self.assertEqual(request.action, "contrib_targeted")
         self.assertEqual(request.repo, "HKUDS/Vibe-Trading")
         self.assertTrue(request.dry_run)
 
     def test_maps_repo_inspect_phrase(self) -> None:
-        request = parse_command_text("cek repo owner/repo dulu")
+        request = parse_command_text("check repo owner/repo first")
 
         self.assertEqual(request.action, "repo_inspect")
         self.assertEqual(request.repo, "owner/repo")
@@ -58,17 +58,17 @@ class CommandRouterTests(unittest.TestCase):
         self.assertEqual(request.scan_kind, "audit")
 
     def test_maps_profile_phrase(self) -> None:
-        request = parse_command_text("siapa login sekarang")
+        request = parse_command_text("who am i right now")
 
         self.assertEqual(request.action, "profile")
 
     def test_maps_doctor_phrase(self) -> None:
-        request = parse_command_text("jalankan doctor")
+        request = parse_command_text("run doctor")
 
         self.assertEqual(request.action, "doctor")
 
     def test_maps_feedback_response_phrase(self) -> None:
-        request = parse_command_text("balas maintainer feedback")
+        request = parse_command_text("respond to maintainer feedback")
 
         self.assertEqual(request.action, "contrib_respond")
 
@@ -86,21 +86,21 @@ class CommandRouterTests(unittest.TestCase):
         self.assertFalse(request.dry_run)
 
     def test_maps_fix_bug_shortcut_to_bugfix_lane(self) -> None:
-        request = parse_command_text("Rover, fix bug di owner/repo")
+        request = parse_command_text("Rover, fix bug in owner/repo")
 
         self.assertEqual(request.action, "contrib_targeted")
         self.assertEqual(request.repo, "owner/repo")
         self.assertEqual(request.goal, "bugfix")
 
     def test_maps_update_deps_shortcut_to_dep_update_lane(self) -> None:
-        request = parse_command_text("Rover, update deps di owner/repo")
+        request = parse_command_text("Rover, update deps in owner/repo")
 
         self.assertEqual(request.action, "contrib_targeted")
         self.assertEqual(request.repo, "owner/repo")
         self.assertEqual(request.goal, "dep_update")
 
     def test_malformed_repo_shortcut_falls_back_to_safe_doctor(self) -> None:
-        request = parse_command_text("Rover, fix bug di repo-abc")
+        request = parse_command_text("Rover, fix bug in repo-abc")
 
         self.assertEqual(request.action, "doctor")
         self.assertEqual(request.confidence, "low")
@@ -149,13 +149,13 @@ class CommandRouterTests(unittest.TestCase):
     def test_builder_command_text_doctor_prints_report(self) -> None:
         with mock.patch("app.builder.build_doctor_report", return_value="DOCTOR_OK"):
             with mock.patch("sys.stdout", new_callable=io.StringIO) as stdout:
-                builder.main(["--command-text", "cek kesehatan contribution engine"])
+                builder.main(["--command-text", "check contribution engine readiness"])
         self.assertIn("DOCTOR_OK", stdout.getvalue())
 
     def test_builder_command_text_report_prints_report(self) -> None:
         with mock.patch("src.contrib.pr_generator.get_contribution_report_data", return_value=([], [])):
             with mock.patch("src.core.cli_ui.print_styled_report") as mock_report:
-                builder.main(["--command-text", "tampilkan report kontribusi terakhir"])
+                builder.main(["--command-text", "show last contribution report"])
         mock_report.assert_called_once()
 
     def test_builder_doctor_json_prints_machine_readable_payload(self) -> None:
@@ -174,7 +174,7 @@ class CommandRouterTests(unittest.TestCase):
         with mock.patch("sys.stdout", new_callable=io.StringIO) as stdout, mock.patch(
             "app.builder.run_contribution_mode"
         ) as mocked_run:
-            builder.main(["--command-text", "buat 1 kontribusi", "--route-only", "--json"])
+            builder.main(["--command-text", "make 1 contribution", "--route-only", "--json"])
         self.assertIn('"action": "route_command"', stdout.getvalue())
         self.assertIn('"mapped_action": "contrib_once"', stdout.getvalue())
         mocked_run.assert_not_called()

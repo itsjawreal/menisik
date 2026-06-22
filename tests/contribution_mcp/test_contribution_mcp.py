@@ -232,7 +232,7 @@ class ContributionMCPToolsTests(unittest.TestCase):
     def test_route_command_maps_natural_language_request(self) -> None:
         from src.contribution_mcp.server import route_command
 
-        result = route_command("buat satu pull request ke https://github.com/example/project")
+        result = route_command("create one pull request to https://github.com/example/project")
         self.assertEqual(result["action"], "contrib_targeted")
         self.assertEqual(result["repo"], "example/project")
         self.assertTrue(result["dry_run"])

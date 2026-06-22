@@ -115,8 +115,8 @@ it through the repository's local checks.
 New shortcuts:
 
 ```text
-Rover, fix bug di owner/repo
-Rover, update deps di owner/repo
+Rover, fix bug in owner/repo
+Rover, update deps in owner/repo
 ```
 
 These map to targeted contribution runs:

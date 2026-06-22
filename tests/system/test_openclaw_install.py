@@ -41,7 +41,7 @@ class OpenClawInstallTests(unittest.TestCase):
             self.assertIn("For `rover scan ...`, return Rover scan output only", skill_text)
             self.assertIn("For `rover scan ...`, never fall back to repo inspection", skill_text)
             self.assertIn("For `rover scan trust ...` and `rover scan audit ...`, do not claim that Python or TypeScript files are required", skill_text)
-            self.assertIn("Treat `run ...` / `jalankan ...` contribution requests as live submission attempts", skill_text)
+            self.assertIn("Treat `run ...` contribution requests as live submission attempts", skill_text)
             self.assertIn("If a live Rover run is accepted, send one short acknowledgement with the `run_id`", skill_text)
             self.assertIn("Do not improvise with `gh`, manual issue browsing, direct GitHub checks", skill_text)
             self.assertIn("Do not emit multiple assistant progress messages for the same run", skill_text)

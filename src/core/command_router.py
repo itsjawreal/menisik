@@ -21,10 +21,7 @@ _COUNT_WORDS = {
     "an": 1,
     "one": 1,
     "single": 1,
-    "satu": 1,
-    "dua": 2,
     "two": 2,
-    "tiga": 3,
     "three": 3,
 }
 
@@ -84,38 +81,38 @@ def parse_command_text(text: str) -> CommandRequest:
     repo = _extract_repo(raw)
     count = _extract_count(normalized)
     goal = _extract_goal(normalized)
-    first_pr = any(token in normalized for token in ("first pr", "repo pertama", "first contribution", "kontribusi pertama"))
+    first_pr = any(token in normalized for token in ("first pr", "first contribution"))
     dry_run = not _wants_live_submission(normalized)
 
-    if _matches_any(normalized, "profile", "who am i", "whoami", "siapa login", "akun github", "github profile"):
+    if _matches_any(normalized, "profile", "who am i", "whoami", "github profile", "current login"):
         return CommandRequest(
             action="profile",
             confidence="high",
             rationale=["Matched operator identity/profile intent."],
         )
 
-    if _matches_any(normalized, "doctor", "readiness", "health check", "cek kesiapan", "cek environment", "cek mesin"):
+    if _matches_any(normalized, "doctor", "readiness", "health check", "check environment", "check machine"):
         return CommandRequest(
             action="doctor",
             confidence="high",
             rationale=["Matched environment/readiness intent."],
         )
 
-    if _matches_any(normalized, "report", "laporan", "ringkasan", "summary", "status engine"):
+    if _matches_any(normalized, "report", "summary", "status engine"):
         return CommandRequest(
             action="contrib_report",
             confidence="high",
             rationale=["Matched reporting intent."],
         )
 
-    if _matches_any(normalized, "respond", "balas maintainer", "reply maintainer", "feedback maintainer", "balas feedback"):
+    if _matches_any(normalized, "respond", "reply maintainer", "feedback maintainer", "maintainer feedback"):
         return CommandRequest(
             action="contrib_respond",
             confidence="high",
             rationale=["Matched maintainer-response intent."],
         )
 
-    if _matches_any(normalized, "contrib-check", "pr check", "check pr", "cek pr", "check maintainer", "cek maintainer", "status pr"):
+    if _matches_any(normalized, "contrib-check", "pr check", "check pr", "check maintainer", "status pr"):
         return CommandRequest(
             action="contrib_check",
             confidence="high",
@@ -133,9 +130,9 @@ def parse_command_text(text: str) -> CommandRequest:
     if _looks_like_repo_scan(normalized):
         if _matches_any(normalized, "audit", "full scan", "full audit", "scan audit"):
             scan_kind = "audit"
-        elif _matches_any(normalized, "trust", "reputation", "legit", "aman dipakai", "safe to use"):
+        elif _matches_any(normalized, "trust", "reputation", "legit", "safe to use"):
             scan_kind = "trust"
-        elif _matches_any(normalized, "security", "secure", "keamanan", "vulnerability", "vuln"):
+        elif _matches_any(normalized, "security", "secure", "vulnerability", "vuln"):
             scan_kind = "security"
         else:
             scan_kind = "bug"
@@ -207,32 +204,26 @@ def _extract_goal(normalized: str) -> str:
         "bump deps",
         "bump dependency",
         "bump dependencies",
-        "perbarui dependensi",
-        "update dependensi",
     ):
         return "dep_update"
-    if _matches_any(normalized, "feature add", "new feature", "fitur baru", "tambahkan fitur"):
+    if _matches_any(normalized, "feature add", "new feature", "add feature"):
         return "feature_add"
-    if _matches_any(normalized, "upgrade", "improve feature", "enhancement", "tingkatkan fitur"):
+    if _matches_any(normalized, "upgrade", "improve feature", "enhancement"):
         return "feature_upgrade"
     return "bugfix"
 
 
 def _wants_live_submission(normalized: str) -> bool:
-    if normalized.startswith("run ") or normalized.startswith("jalankan "):
+    if normalized.startswith("run "):
         return True
     return _matches_any(
         normalized,
         "rover run",
         "submit",
-        "jalankan kontribusi",
-        "jalankan run",
         "open pr",
-        "kirim pr",
         "create pr now",
         "live run",
         "non dry run",
-        "bukan preview",
         "real pr",
     )
 
@@ -242,11 +233,8 @@ def _looks_like_repo_inspect(normalized: str) -> bool:
         normalized,
         "inspect repo",
         "repo inspect",
-        "cek repo",
         "check repo",
-        "lihat repo",
         "analyze repo",
-        "analisa repo",
         "review repo",
     )
 
@@ -263,11 +251,9 @@ def _looks_like_repo_scan(normalized: str) -> bool:
         "repo trust",
         "security scan",
         "scan security",
-        "cek security",
         "check security",
         "scan bug",
         "check bug",
-        "cek bug",
     )
 
 
@@ -275,16 +261,10 @@ def _looks_like_contribution_request(normalized: str) -> bool:
     contribution_words = (
         "contrib",
         "contribution",
-        "kontribusi",
         "pull request",
         "pr",
-        "repo untuk di kontribusi",
-        "repo untuk dikontribusi",
     )
     action_words = (
-        "buat",
-        "jalankan",
-        "cari",
         "create",
         "run",
         "make",
@@ -299,7 +279,6 @@ def _looks_like_contribution_request(normalized: str) -> bool:
         "fix bug",
         "bugfix",
         "fix issue",
-        "perbaiki bug",
         "update deps",
         "update dependency",
         "update dependencies",

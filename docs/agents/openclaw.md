@@ -122,8 +122,8 @@ Preferred commands from that skill:
 - `doctor`
 - `contrib_report`
 - `repo_inspect --repo owner/repo`
-- `message --text "buat 1 kontribusi"`
-- `message --text "tampilkan report kontribusi terakhir"`
+- `message --text "make 1 contribution"`
+- `message --text "show last contribution report"`
 
 For natural-language chat channels, `route --text "..."` is the safest first step. Use `message --text "..."` only when you intentionally want a synchronous direct Rover call instead of MCP background execution.
 
@@ -158,8 +158,8 @@ For natural-language channels such as Telegram or Discord routed through OpenCla
 
 Example:
 
-- user says `buat 1 kontribusi`
-- OpenClaw calls `route_command(text="buat 1 kontribusi")`
+- user says `make 1 contribution`
+- OpenClaw calls `route_command(text="make 1 contribution")`
 - result maps to `contrib_once` with `dry_run=true`
 - OpenClaw then calls `contrib_once(dry_run=true)`
 
