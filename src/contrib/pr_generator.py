@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import logging
 import os
@@ -2737,6 +2738,11 @@ def get_followup_candidates(
     for full_name, repo_entries in by_repo.items():
         if full_name in blacklisted:
             continue
+        if full_name in already_prd:
+            # Already attempted (or excluded) earlier in this run — re-surfacing it
+            # makes the run loop retry the same target every attempt, burning AI
+            # cycles on a candidate that already failed. Skip it.
+            continue
         if current_login and full_name.startswith(f"{current_login}/"):
             continue
 
@@ -3350,6 +3356,35 @@ def _check_diff_safety(
     return None
 
 
+def _is_style_only_change(
+    original_files: dict[str, str],
+    changed_files: dict[str, str],
+) -> bool:
+    """Return True if every changed file is semantically identical to its original.
+
+    Uses AST equality for Python files, so a comment/whitespace/formatting-only
+    edit is detected deterministically and can be rejected without spending an AI
+    self-review call. Any new file, non-Python file, parse failure, or AST
+    difference means the patch carries a real change and is NOT style-only.
+    """
+    compared = 0
+    for path, new_content in changed_files.items():
+        original = original_files.get(path, "")
+        if not original:
+            return False  # new file → genuine addition, not cosmetic
+        if not path.endswith(".py"):
+            return False  # cannot prove cosmetic-only without a parser
+        try:
+            orig_tree = ast.parse(original)
+            new_tree = ast.parse(new_content)
+        except SyntaxError:
+            return False
+        if ast.dump(orig_tree) != ast.dump(new_tree):
+            return False  # genuine semantic change
+        compared += 1
+    return compared > 0
+
+
 def _self_review_diff(
     candidate: "RepoCandidate",
     changed_files: dict[str, str],
@@ -3362,6 +3397,17 @@ def _self_review_diff(
     Returns a rejection reason if the reviewer finds problems, else None.
     Skips if no original content exists for comparison (new file additions).
     """
+    # Deterministic pre-gate: reject AST-identical (style-only) patches without
+    # spending an AI call. The semantic AI review fails open on error, so this
+    # also closes the gap where a cosmetic patch could slip through.
+    if _is_style_only_change(candidate.files, changed_files):
+        log.warning("Self-review REJECTED: style-only change (AST identical to original)")
+        return (
+            "Patch is style-only: the abstract syntax tree is identical to the "
+            "original, so it changes only comments, whitespace, or formatting "
+            "with no correctness value."
+        )
+
     # Build before/after pairs for files that exist in the original
     pairs = []
     for path, new_content in changed_files.items():
@@ -3420,12 +3466,22 @@ Respond with JSON only:
   "reason": "one sentence explanation — if safe=true say why; if safe=false name the exact input case, plan drift, or behavior change"
 }}"""
 
-    try:
-        raw = call_ai(review_prompt, timeout=get_scaled_timeout(120, 1))
-        review = _parse_json(raw)
-    except Exception as exc:
-        log.warning("Self-review AI call failed: %s — allowing change through", exc)
-        return None  # fail open: don't block on reviewer timeout
+    review: dict | None = None
+    last_exc: Exception | None = None
+    for review_attempt in range(2):
+        try:
+            raw = call_ai(review_prompt, timeout=get_scaled_timeout(120, 1))
+            review = _parse_json(raw)
+            break
+        except Exception as exc:
+            last_exc = exc
+            log.warning("Self-review AI call failed (attempt %d/2): %s", review_attempt + 1, exc)
+    if review is None:
+        # Fail closed: a change we could not review is not proven safe. Rejecting a
+        # patch we cannot verify protects maintainer trust far more than shipping an
+        # unreviewed diff would. The retry above absorbs transient backend blips.
+        log.warning("Self-review could not complete — rejecting unverified patch")
+        return f"self-review could not complete ({last_exc}) — patch not verified safe"
 
     if not review.get("safe", True):
         reason = review.get("reason", "reviewer found a problem")

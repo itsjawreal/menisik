@@ -37,6 +37,7 @@ from src.contrib.pr_generator import (
     fetch_repo_candidate_with_scope,
     generate_dep_update,
     generate_pr_improvement,
+    get_followup_candidates,
     get_pr_submitted_repos,
     save_pr_log,
 )
@@ -832,6 +833,97 @@ class PRGeneratorHardeningTests(unittest.TestCase):
         self.assertIsNone(rejection)
         self.assertIn("Approved patch plan", captured_prompt["text"])
         self.assertIn("proof_path", captured_prompt["text"])
+
+    def test_followup_candidates_excludes_already_attempted_repo(self) -> None:
+        fake_log = {
+            "submitted": [
+                {
+                    "full_name": "owner/repo-a",
+                    "pr_url": "https://github.com/owner/repo-a/pull/1",
+                    "status": "merged",
+                    "submitted_at": "2020-01-01T00:00:00+00:00",
+                },
+                {
+                    "full_name": "owner/repo-b",
+                    "pr_url": "https://github.com/owner/repo-b/pull/1",
+                    "status": "merged",
+                    "submitted_at": "2020-01-01T00:00:00+00:00",
+                },
+            ]
+        }
+        with patch("src.contrib.pr_generator.load_pr_log", return_value=fake_log), \
+             patch("src.github.fork.get_current_github_login", return_value=""):
+            all_followups = get_followup_candidates(set(), set())
+            self.assertIn("owner/repo-a", all_followups)
+
+            # A repo already attempted this run must not be re-surfaced — otherwise
+            # the run loop retries the same failing target every attempt.
+            filtered = get_followup_candidates(set(), {"owner/repo-a"})
+            self.assertNotIn("owner/repo-a", filtered)
+            self.assertIn("owner/repo-b", filtered)
+
+    def test_self_review_fails_closed_when_ai_unavailable(self) -> None:
+        candidate = RepoCandidate(
+            name="sample",
+            full_name="example/sample",
+            description="Sample repo",
+            stars=10,
+            forks=2,
+            license="MIT",
+            url="https://github.com/example/sample",
+            default_branch="main",
+            pushed_days_ago=1,
+            topics=["python"],
+            files={"sample.py": "def run(value):\n    return int(value)\n"},
+        )
+        calls = {"n": 0}
+
+        def boom(*_args: object, **_kwargs: object) -> str:
+            calls["n"] += 1
+            raise RuntimeError("backend down")
+
+        with patch("src.contrib.pr_generator.call_ai", side_effect=boom):
+            rejection = _self_review_diff(
+                candidate,
+                # A real (non-style-only) change so it reaches the AI review gate.
+                {"sample.py": "def run(value):\n    return parse_value(value)\n"},
+                {"improvement_type": "bug_fix", "pr_title": "fix", "safety_proof": "narrow"},
+                logging.getLogger("test"),
+            )
+
+        # Unverifiable patch must be rejected, not silently passed through.
+        self.assertIsNotNone(rejection)
+        self.assertIn("could not complete", rejection)
+        self.assertEqual(calls["n"], 2)  # retried once before failing closed
+
+    def test_self_review_rejects_style_only_change_without_ai(self) -> None:
+        candidate = RepoCandidate(
+            name="sample",
+            full_name="example/sample",
+            description="Sample repo",
+            stars=10,
+            forks=2,
+            license="MIT",
+            url="https://github.com/example/sample",
+            default_branch="main",
+            pushed_days_ago=1,
+            topics=["python"],
+            files={"sample.py": "def run(value):\n    return int(value)\n"},
+        )
+
+        def boom(*_args: object, **_kwargs: object) -> str:
+            raise AssertionError("AI must not be called for a style-only change")
+
+        with patch("src.contrib.pr_generator.call_ai", side_effect=boom):
+            rejection = _self_review_diff(
+                candidate,
+                {"sample.py": "def run(value):\n    # added a comment only\n    return int(value)\n"},
+                {"improvement_type": "bug_fix", "pr_title": "noop", "safety_proof": "no change"},
+                logging.getLogger("test"),
+            )
+
+        self.assertIsNotNone(rejection)
+        self.assertIn("style-only", rejection)
 
     def test_targeted_shortlist_rejects_weak_core_candidate_before_ai(self) -> None:
         store = self._make_store()
