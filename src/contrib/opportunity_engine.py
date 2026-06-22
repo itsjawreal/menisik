@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import os
 import re
 from dataclasses import dataclass, field
@@ -233,18 +234,28 @@ class PatternScanner:
         files: dict[str, str],
     ) -> list[Opportunity]:
         opportunities: list[Opportunity] = []
-        lines = content.splitlines()
-        pattern = re.compile(r"\b(requests|httpx)\.(get|post|put|patch|delete|request)\(")
-        for idx, line in enumerate(lines):
-            if not pattern.search(line):
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return opportunities
+
+        methods = {"get", "post", "put", "patch", "delete", "request"}
+        clients = {"requests", "httpx"}
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
                 continue
-            window = "\n".join(lines[idx: min(idx + 3, len(lines))])
-            if "timeout=" in window:
+            if not isinstance(node.func, ast.Attribute):
                 continue
-            evidence = f"Line {idx + 1} issues an HTTP call without an explicit timeout."
+            if node.func.attr not in methods:
+                continue
+            if not isinstance(node.func.value, ast.Name) or node.func.value.id not in clients:
+                continue
+            if any(keyword.arg == "timeout" for keyword in node.keywords):
+                continue
+            evidence = f"Line {node.lineno} issues an HTTP call without an explicit timeout."
             failure_mode = "A slow or hanging upstream endpoint can block the command indefinitely instead of failing fast."
             opportunities.append(
-                self._build_opportunity(candidate, path, "missing_timeout", failure_mode, evidence, idx + 1, 78 + base_bonus, files)
+                self._build_opportunity(candidate, path, "missing_timeout", failure_mode, evidence, node.lineno, 78 + base_bonus, files)
             )
             break
         return opportunities

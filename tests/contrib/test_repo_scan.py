@@ -73,6 +73,33 @@ class RepoScanTests(unittest.TestCase):
         self.assertFalse(any(item["file"].startswith("tests/") for item in payload["findings"]))
         self.assertFalse(any(item["rule_id"] == "missing_regression_test_for_obvious_bugfix" for item in payload["findings"]))
 
+    def test_bug_scan_does_not_flag_requests_call_in_docstring(self) -> None:
+        from src.contrib.repo_scan import build_scan_payload
+
+        candidate = RepoCandidate(
+            name="sample",
+            full_name="example/sample",
+            description="sample repo",
+            stars=10,
+            forks=2,
+            license="mit",
+            url="https://github.com/example/sample",
+            default_branch="main",
+            pushed_days_ago=1,
+            files={
+                "client.py": 'def fetch(url):\n    """Example: requests.get(url)"""\n    return url\n',
+                "requirements.txt": "requests==2.0.0\n",
+            },
+        )
+        with (
+            patch("src.contrib.repo_scan._fetch_scan_candidate", return_value=candidate),
+            patch("src.contrib.repo_scan.get_repo_inspect_data", return_value={"targeted_scope": "targeted-ready", "scope_notes": []}),
+        ):
+            payload = build_scan_payload("example/sample", logging.getLogger("test"), kind="bug")
+
+        rule_ids = {item["rule_id"] for item in payload["findings"]}
+        self.assertNotIn("missing_timeout", rule_ids)
+
     def test_security_scan_reports_no_supported_files_clearly(self) -> None:
         from src.contrib.repo_scan import build_scan_payload
 
