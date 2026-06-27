@@ -190,7 +190,7 @@ class PatternScanner:
                 opportunities.extend(self._scan_missing_timeout(candidate, path, content, base_bonus, files))
             if "unchecked_response_shape" not in skip:
                 opportunities.extend(self._scan_unchecked_response_shape(candidate, path, content, base_bonus, files))
-            if "unsafe_file_write" not in skip:
+            if "unsafe_file_write_or_path" not in skip:
                 opportunities.extend(self._scan_unsafe_file_write(candidate, path, content, base_bonus, files))
             if "overbroad_exception_handling" not in skip:
                 opportunities.extend(self._scan_overbroad_exception(candidate, path, content, base_bonus, files))
@@ -206,7 +206,7 @@ class PatternScanner:
                 opportunities.extend(self._scan_missing_retry_backoff(candidate, path, content, base_bonus, files))
             if "unsafe_subprocess" not in skip:
                 opportunities.extend(self._scan_unsafe_subprocess(candidate, path, content, base_bonus, files))
-            if "temp_file_cleanup" not in skip:
+            if "temp_file_cleanup_gap" not in skip:
                 opportunities.extend(self._scan_temp_file_cleanup(candidate, path, content, base_bonus, files))
             if "flaky_time_dependent_test" not in skip:
                 opportunities.extend(self._scan_flaky_time_dependent_test(candidate, path, content, base_bonus, files))

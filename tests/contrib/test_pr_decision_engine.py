@@ -98,6 +98,19 @@ class PatternScannerTests(unittest.TestCase):
         self.assertEqual(feature_opps[0].pattern_type, "maintainer_todo_feature_upgrade")
         self.assertTrue(feature_opps[0].maintainer_intent)
 
+    def test_excluded_patterns_skips_temp_file_cleanup_gap_by_exact_type_name(self) -> None:
+        candidate = _candidate(
+            {
+                "worker.py": "import tempfile\n\ndef run():\n    path = tempfile.mkdtemp()\n    return path\n",
+                "tests/test_worker.py": "def test_run():\n    assert True\n",
+            }
+        )
+        all_patterns = {opp.pattern_type for opp in self.scanner.scan(candidate)}
+        self.assertIn("temp_file_cleanup_gap", all_patterns)
+
+        excluded = {opp.pattern_type for opp in self.scanner.scan(candidate, excluded_patterns={"temp_file_cleanup_gap"})}
+        self.assertNotIn("temp_file_cleanup_gap", excluded)
+
     def test_guess_test_target_prefers_repo_layout_near_target_file(self) -> None:
         files = {
             "agent/backtest/validation.py": "def main():\n    return 1\n",
