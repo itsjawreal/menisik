@@ -111,6 +111,19 @@ class PatternScannerTests(unittest.TestCase):
         excluded = {opp.pattern_type for opp in self.scanner.scan(candidate, excluded_patterns={"temp_file_cleanup_gap"})}
         self.assertNotIn("temp_file_cleanup_gap", excluded)
 
+    def test_excluded_patterns_skips_maintainer_todo_feature_upgrade_by_exact_type_name(self) -> None:
+        candidate = _candidate(
+            {
+                "cli.py": "# TODO: add --format json support for output\n\ndef run():\n    return 1\n",
+                "tests/test_cli.py": "def test_run():\n    assert True\n",
+            }
+        )
+        all_patterns = {opp.pattern_type for opp in self.scanner.scan(candidate)}
+        self.assertIn("maintainer_todo_feature_upgrade", all_patterns)
+
+        excluded = {opp.pattern_type for opp in self.scanner.scan(candidate, excluded_patterns={"maintainer_todo_feature_upgrade"})}
+        self.assertNotIn("maintainer_todo_feature_upgrade", excluded)
+
     def test_guess_test_target_prefers_repo_layout_near_target_file(self) -> None:
         files = {
             "agent/backtest/validation.py": "def main():\n    return 1\n",

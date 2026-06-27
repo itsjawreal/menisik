@@ -200,7 +200,7 @@ class PatternScanner:
                 opportunities.extend(self._scan_resource_cleanup_gap(candidate, path, content, base_bonus, files))
             if "missing_regression_test_for_obvious_bugfix" not in skip:
                 opportunities.extend(self._scan_missing_regression_test(candidate, path, content, base_bonus, files))
-            if "feature_upgrade_todo" not in skip:
+            if "maintainer_todo_feature_upgrade" not in skip:
                 opportunities.extend(self._scan_feature_upgrade_todo(candidate, path, content, base_bonus, files))
             if "missing_retry_backoff" not in skip:
                 opportunities.extend(self._scan_missing_retry_backoff(candidate, path, content, base_bonus, files))
