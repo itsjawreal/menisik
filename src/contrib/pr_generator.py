@@ -1206,7 +1206,7 @@ def _classify_patch_shape(
     opportunity: Opportunity,
 ) -> PatchShape:
     risky_surface_re = re.compile(
-        r"(^|/)(context|context_system|config|settings|auth|loader|parser|middleware|hooks?)(/|$|\\.)",
+        r"(^|/)(context|context_system|config|settings|auth|loader|parser|middleware|hooks?)(/|$|\.)",
         re.IGNORECASE,
     )
     for path, updated in changed_files.items():
@@ -1240,7 +1240,7 @@ def _targeted_execution_mode(policy: PatternSubmitPolicy, patch_shape: PatchShap
 
 
 def _title_family(title: str) -> str:
-    normalized = re.sub(r"^(fix|bugfix|chore|refactor|docs|test)(\\([^)]*\\))?:\\s*", "", title.lower()).strip()
+    normalized = re.sub(r"^(fix|bugfix|chore|refactor|docs|test)(\([^)]*\))?:\s*", "", title.lower()).strip()
     normalized = re.sub(r"[^a-z0-9]+", " ", normalized)
     return " ".join(normalized.split()[:8])
 

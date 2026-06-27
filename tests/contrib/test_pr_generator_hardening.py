@@ -1270,6 +1270,25 @@ class PRGeneratorHardeningTests(unittest.TestCase):
         self.assertEqual(shape.risk, "high")
         self.assertIn("manual review", shape.reason)
 
+    def test_patch_shape_classifier_flags_risky_filename_stem_not_just_directory(self) -> None:
+        opportunity = Opportunity(
+            repo_full_name="example/repo",
+            target_file="src/auth.py",
+            pattern_type="missing_timeout",
+            failure_mode="No timeout on auth call.",
+            evidence="requests.get omits timeout.",
+            patch_scope=1,
+            test_target="tests/test_auth.py",
+            acceptance_score=90,
+        )
+        shape = _classify_patch_shape(
+            {"src/auth.py": "def authenticate(token):\n    return token\n"},
+            {"src/auth.py": "def authenticate(token):\n    return token + ' ok'\n"},
+            opportunity,
+        )
+        self.assertEqual(shape.risk, "high")
+        self.assertIn("manual review", shape.reason)
+
     def test_targeted_execution_mode_splits_live_safe_from_review(self) -> None:
         safe = Opportunity(
             repo_full_name="example/repo",
@@ -1315,7 +1334,7 @@ class PRGeneratorHardeningTests(unittest.TestCase):
             "safety_proof": "Only timeout handling changes.",
         }
         second = {
-            "pr_title": "Fix add request timeout",
+            "pr_title": "chore: add request timeout",
             "pr_body": "## Summary\nAdd timeout",
             "rationale": "Same patch family.",
             "safety_proof": "Same patch family.",
@@ -1324,6 +1343,24 @@ class PRGeneratorHardeningTests(unittest.TestCase):
         with patch.dict("src.contrib.pr_generator._ACTIVE_RUN_METRICS", {"seen_title_families": []}, clear=True):
             self.assertIsNone(_duplicate_patch_family_rejection(first))
             self.assertIn("Repeated PR title family", _duplicate_patch_family_rejection(second))
+
+    def test_duplicate_patch_family_treats_scoped_prefix_same_as_plain_prefix(self) -> None:
+        scoped = {
+            "pr_title": "chore(deps): bump axios",
+            "pr_body": "## Summary\nBump axios",
+            "rationale": "Outdated dependency.",
+            "safety_proof": "Only version number changes.",
+        }
+        plain = {
+            "pr_title": "fix: bump axios",
+            "pr_body": "## Summary\nBump axios",
+            "rationale": "Outdated dependency.",
+            "safety_proof": "Only version number changes.",
+        }
+
+        with patch.dict("src.contrib.pr_generator._ACTIVE_RUN_METRICS", {"seen_title_families": []}, clear=True):
+            self.assertIsNone(_duplicate_patch_family_rejection(scoped))
+            self.assertIn("Repeated PR title family", _duplicate_patch_family_rejection(plain))
 
     def test_duplicate_patch_family_rejects_exception_policy_wording(self) -> None:
         result = {
