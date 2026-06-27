@@ -81,6 +81,13 @@ def generate_patch_with_retry(
             sandbox_outcome="sandbox_retry_failed",
         )
 
+    if not retry.improvement.changed_files:
+        return PatchPlan(
+            improvement=initial.improvement,
+            sandbox_retry_used=True,
+            sandbox_outcome="sandbox_retry_failed",
+        )
+
     retry_sandbox = run_sandbox_validation(retry.improvement.changed_files)
     if retry_sandbox.sandbox_verified:
         log.info("Self-debug retry succeeded.")

@@ -127,6 +127,69 @@ class AgentStructureTests(unittest.TestCase):
 
         self.assertFalse((result.checkout_path / "broken.txt").exists())
 
+    def test_generate_patch_with_retry_falls_back_to_initial_when_retry_yields_empty_files(self) -> None:
+        # Regression: if the retry patch generates no changed_files, run_sandbox_validation({})
+        # returns sandbox_verified=True vacuously (nothing to compile → nothing fails). Without
+        # the empty-files guard the empty retry patch gets returned as "sandbox_retry_success"
+        # instead of falling back to the initial patch.
+        import logging
+        from unittest.mock import MagicMock
+        from src.contrib.patch_generator import generate_patch_with_retry
+        from src.contrib.pr_generator import PRImprovement
+        from src.contrib.validator import ValidationResult
+
+        initial_improvement = PRImprovement(
+            title="fix: add timeout",
+            body="## Summary\nAdds timeout to requests.get calls.",
+            improvement_type="bug_fix",
+            changed_files={"app.py": "import requests\nrequests.get(url, timeout=10)\n"},
+            rationale="Prevents hanging requests.",
+        )
+        empty_improvement = PRImprovement(
+            title="fix: add timeout",
+            body="",
+            improvement_type="bug_fix",
+            changed_files={},
+            rationale="",
+        )
+
+        call_count = 0
+
+        def fake_generate_patch(candidate, log, goal="bugfix"):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return PatchPlan(improvement=initial_improvement)
+            return PatchPlan(improvement=empty_improvement)
+
+        fake_sandbox_fail = ValidationResult(
+            status="failed", summary="compile error", sandbox_verified=False, sandbox_output="SyntaxError on line 1"
+        )
+
+        from src.github.scraper import RepoCandidate as RC
+        candidate = RC(
+            name="sample",
+            full_name="example/sample",
+            description="a test repo",
+            stars=10,
+            forks=2,
+            license="MIT",
+            url="https://github.com/example/sample",
+            default_branch="main",
+            pushed_days_ago=1,
+            topics=[],
+            files={"app.py": "import requests\nrequests.get(url)\n"},
+        )
+
+        with patch("src.contrib.patch_generator.generate_patch", side_effect=fake_generate_patch), patch(
+            "src.contrib.validator.run_sandbox_validation", return_value=fake_sandbox_fail
+        ):
+            result = generate_patch_with_retry(candidate, logging.getLogger("test"))
+
+        self.assertEqual(result.improvement.changed_files, initial_improvement.changed_files)
+        self.assertEqual(result.sandbox_outcome, "sandbox_retry_failed")
+        self.assertTrue(result.sandbox_retry_used)
+
     def _make_logger(self):
         import logging
 
