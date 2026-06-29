@@ -1449,7 +1449,11 @@ def _recent_pr_recon(candidate: RepoCandidate, log: logging.Logger) -> dict:
                 text=True,
                 encoding="utf-8",
                 check=False,
+                timeout=30,
             )
+        except subprocess.TimeoutExpired:
+            log.warning("Repo recon skipped for %s: gh pr list timed out", candidate.full_name)
+            return {"enabled": True, "available": False, "reason": "gh_timeout"}
         except FileNotFoundError:
             log.warning("Repo recon skipped for %s: gh CLI not found", candidate.full_name)
             return {"enabled": True, "available": False, "reason": "gh_not_found"}

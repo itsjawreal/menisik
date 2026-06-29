@@ -261,6 +261,27 @@ class PRGeneratorHardeningTests(unittest.TestCase):
 
         self.assertIn("archived", str(ctx.exception))
 
+    def test_recent_pr_recon_returns_unavailable_on_gh_timeout(self) -> None:
+        candidate = RepoCandidate(
+            name="sample",
+            full_name="example/sample",
+            description="Sample repo",
+            stars=1000,
+            forks=100,
+            license="MIT",
+            url="https://github.com/example/sample",
+            default_branch="main",
+            pushed_days_ago=1,
+            topics=["python"],
+            files={},
+        )
+
+        with patch("src.contrib.pr_generator.subprocess.run", side_effect=subprocess.TimeoutExpired(["gh"], 30)):
+            result = _recent_pr_recon(candidate, logging.getLogger("test"))
+
+        self.assertFalse(result.get("available"))
+        self.assertEqual(result.get("reason"), "gh_timeout")
+
     def test_recent_pr_recon_rejects_repeated_negative_closed_prs(self) -> None:
         candidate = RepoCandidate(
             name="sample",
