@@ -714,16 +714,22 @@ def _maybe_notify_stall(run: ManagedRun) -> None:
 def _run_notification_loop(run: ManagedRun) -> None:
     if run.notification_route is None:
         return
+    log = logging.getLogger(__name__)
     while True:
-        _sync_repo_events(run)
-        _update_run_summary(run)
-        _maybe_notify_run_events(run)
-        _maybe_notify_progress(run)
-        _maybe_notify_stall(run)
-        if run.state not in {"queued", "started", "running"}:
+        try:
+            _sync_repo_events(run)
+            _update_run_summary(run)
             _maybe_notify_run_events(run)
-            _send_terminal_notification(run)
-            break
+            _maybe_notify_progress(run)
+            _maybe_notify_stall(run)
+            if run.state not in {"queued", "started", "running"}:
+                _maybe_notify_run_events(run)
+                _send_terminal_notification(run)
+                break
+        except Exception as exc:
+            log.warning("Notification loop error for run %s: %s", run.run_id[:8], exc)
+            if run.state not in {"queued", "started", "running"}:
+                break
         time.sleep(1.0)
 
 
