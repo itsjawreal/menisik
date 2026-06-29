@@ -388,7 +388,10 @@ class ContributionStore:
             return None
         data = dict(row)
         summary_raw = data.pop("summary_json", "") or ""
-        data["summary"] = json.loads(summary_raw) if summary_raw else None
+        try:
+            data["summary"] = json.loads(summary_raw) if summary_raw else None
+        except Exception:
+            data["summary"] = None
         return data
 
     def get_run_by_external_id(self, external_run_id: str) -> dict | None:
@@ -403,7 +406,10 @@ class ContributionStore:
             return None
         data = dict(row)
         summary_raw = data.pop("summary_json", "") or ""
-        data["summary"] = json.loads(summary_raw) if summary_raw else None
+        try:
+            data["summary"] = json.loads(summary_raw) if summary_raw else None
+        except Exception:
+            data["summary"] = None
         return data
 
     def get_repo_events_for_run(self, run_id: int, after_id: int = 0) -> list[dict]:
