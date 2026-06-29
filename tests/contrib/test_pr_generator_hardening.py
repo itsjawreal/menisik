@@ -32,6 +32,7 @@ from src.contrib.pr_generator import (
     _targeted_execution_mode,
     _targeted_pattern_policy,
     _validate_candidate_scope,
+    check_all_prs,
     check_pr_statuses,
     check_pr_feedback,
     fetch_repo_candidate_with_scope,
@@ -1394,6 +1395,50 @@ class PRGeneratorHardeningTests(unittest.TestCase):
         with patch.dict("src.contrib.pr_generator._ACTIVE_RUN_METRICS", {"seen_title_families": []}, clear=True):
             self.assertIsNone(_duplicate_patch_family_rejection(result))
             self.assertIn("exception-policy wording", _duplicate_patch_family_rejection(result))
+
+    def test_check_all_prs_reviews_timeout_does_not_propagate_or_lose_data(self) -> None:
+        # Regression: if the reviews fetch timed out, TimeoutExpired previously escaped the
+        # for-loop body, skipping the PR log write. Accumulated changes from prior iterations
+        # (e.g. a closed PR) were silently lost.
+        data = {
+            "submitted": [
+                {
+                    "full_name": "example/upstream-repo",
+                    "pr_url": "https://github.com/example/upstream-repo/pull/42",
+                    "pr_title": "fix: sample",
+                    "fork_name": "currentuser/upstream-repo",
+                    "branch_name": "currentuser-patch-1",
+                    "files_changed": ["src/foo.py"],
+                    "submitted_at": "2026-04-28T10:00:00",
+                    "status": "open",
+                    "notified_merge": False,
+                }
+            ]
+        }
+
+        open_pr_response = SimpleNamespace(
+            returncode=0,
+            stdout='{"state":"open","merged_at":null,"number":42}',
+            stderr="",
+        )
+
+        def fake_subprocess_run(cmd, **kwargs):
+            if "reviews" in cmd:
+                raise subprocess.TimeoutExpired(cmd, 20)
+            return open_pr_response
+
+        with patch("src.contrib.pr_generator.load_pr_log", return_value=data), \
+             patch("src.github.fork.get_current_github_login", return_value="currentuser"), \
+             patch("src.contrib.pr_generator._fetch_pr_comments", return_value=[]), \
+             patch("src.contrib.pr_generator._fetch_pr_review_comments", return_value=[]), \
+             patch("src.contrib.pr_generator._fetch_pr_reviews", return_value=[]), \
+             patch("src.contrib.pr_generator.PR_LOG_FILE") as mock_log_file, \
+             patch("src.contrib.pr_generator.subprocess.run", side_effect=fake_subprocess_run):
+            check_all_prs(logging.getLogger("test"))
+
+        # Function must complete without raising — no assert needed beyond reaching here.
+        # The PR log write is not called when no changes occurred (open PR with no feedback),
+        # but the key assertion is that no exception escaped the loop.
 
 
 if __name__ == "__main__":

@@ -2725,18 +2725,21 @@ def check_all_prs(log: logging.Logger) -> None:
 
         review_decision = ""
         if state == "OPEN":
-            rr = subprocess.run(
-                ["gh", "api", f"repos/{full_name}/pulls/{pr_number_str}/reviews"],
-                capture_output=True, text=True, encoding="utf-8", timeout=20,
-                env=gh_safe_env(),
-            )
-            if rr.returncode == 0:
-                try:
-                    rvs = json.loads(rr.stdout)
-                    if any((rv.get("state") or "").upper() == "APPROVED" for rv in rvs):
-                        review_decision = "APPROVED"
-                except Exception:
-                    pass
+            try:
+                rr = subprocess.run(
+                    ["gh", "api", f"repos/{full_name}/pulls/{pr_number_str}/reviews"],
+                    capture_output=True, text=True, encoding="utf-8", timeout=20,
+                    env=gh_safe_env(),
+                )
+                if rr.returncode == 0:
+                    try:
+                        rvs = json.loads(rr.stdout)
+                        if any((rv.get("state") or "").upper() == "APPROVED" for rv in rvs):
+                            review_decision = "APPROVED"
+                    except Exception:
+                        pass
+            except Exception as exc:
+                log.warning("Error fetching reviews for PR %s: %s", pr_url, exc)
 
         if state == "MERGED" and not entry.get("notified_merge"):
             print_ok(f"MERGED  {full_name}  #{pr_number_str}")
