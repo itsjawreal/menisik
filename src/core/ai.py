@@ -604,7 +604,10 @@ def _call_backend(
 
     t_err.join(10)
     if not timed_out:
-        proc.wait()
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
 
     if timed_out:
         raise BackendRuntimeError(f"{get_backend_label()} backend timed out after {timeout}s")

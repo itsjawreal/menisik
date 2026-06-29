@@ -111,7 +111,7 @@ class AIBackendSelectionTests(unittest.TestCase):
                 self.stderr = []
                 self.returncode = 1
 
-            def wait(self) -> int:
+            def wait(self, timeout: int | None = None) -> int:
                 return self.returncode
 
         with patch("src.core.ai.subprocess.Popen", return_value=_Proc()), patch(
@@ -151,6 +151,37 @@ class AIBackendSelectionTests(unittest.TestCase):
                 ai._call_backend("abc")
 
         self.assertIn("closed stdin early", str(raised.exception))
+
+    def test_call_backend_kills_zombie_process_after_stdout_eof(self) -> None:
+        import subprocess as sp
+
+        killed = {"called": False}
+
+        class _HangingProc:
+            def __init__(self) -> None:
+                self.stdin = Mock()
+                self.stdout = []
+                self.stderr = []
+                self.returncode = 0
+
+            def kill(self) -> None:
+                killed["called"] = True
+                self.returncode = -9
+
+            def wait(self, timeout: int | None = None) -> int:
+                if timeout is not None:
+                    raise sp.TimeoutExpired(["codex"], timeout)
+                return self.returncode
+
+        ai.reset_usage()
+        ai._ACTIVE_BACKEND = "codex"
+
+        with patch("src.core.ai.subprocess.Popen", return_value=_HangingProc()), \
+             patch("src.core.ai._prepare_invocation", return_value=(["codex"], b"prompt")):
+            with self.assertRaises(RuntimeError):
+                ai._call_backend("hello")
+
+        self.assertTrue(killed["called"])
 
     def test_build_command_uses_direct_exec_on_posix(self) -> None:
         with patch("src.core.ai.os.name", "posix"), patch("src.core.ai._ACTIVE_BACKEND", "codex"), patch(
