@@ -2228,12 +2228,15 @@ def _fetch_branch_files(fork_full: str, branch_name: str, file_paths: list[str])
     from src.github.fork import gh_safe_env
     files = {}
     for path in file_paths[:10]:  # cap at 10 files
-        r = subprocess.run(
-            ["gh", "api", f"repos/{fork_full}/contents/{path}?ref={branch_name}",
-             "--jq", ".content"],
-            capture_output=True, text=True, encoding="utf-8", timeout=15,
-            env=gh_safe_env(),
-        )
+        try:
+            r = subprocess.run(
+                ["gh", "api", f"repos/{fork_full}/contents/{path}?ref={branch_name}",
+                 "--jq", ".content"],
+                capture_output=True, text=True, encoding="utf-8", timeout=15,
+                env=gh_safe_env(),
+            )
+        except Exception:
+            continue
         if r.returncode == 0:
             try:
                 import base64
