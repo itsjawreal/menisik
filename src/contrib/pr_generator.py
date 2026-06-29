@@ -2319,7 +2319,7 @@ def generate_pr_response(
     pr_title      = entry.get("pr_title", "")
     pr_url        = entry.get("pr_url", "")
     full_name     = entry.get("full_name", "")
-    files_changed = entry.get("files_changed", [])
+    files_changed = entry.get("files_changed") or []
 
     # Fetch current branch files for context
     # Include files mentioned in inline comments too
