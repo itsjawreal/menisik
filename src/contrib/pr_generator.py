@@ -1670,7 +1670,11 @@ def _check_pr_evidence_quality(result: dict, changed_files: dict[str, str]) -> s
 # ── PR log ────────────────────────────────────────────────────
 def load_pr_log() -> dict:
     if PR_LOG_FILE.exists():
-        data = json.loads(PR_LOG_FILE.read_text(encoding="utf-8"))
+        try:
+            data = json.loads(PR_LOG_FILE.read_text(encoding="utf-8"))
+        except Exception as exc:
+            log.warning("PR log file is corrupt or unreadable (%s); treating as empty", exc)
+            data = {"submitted": []}
     else:
         data = {"submitted": []}
     # Deduplicate entries by pr_url — keep the one with the most resolved status
