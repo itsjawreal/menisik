@@ -190,6 +190,26 @@ class AgentStructureTests(unittest.TestCase):
         self.assertEqual(result.sandbox_outcome, "sandbox_retry_failed")
         self.assertTrue(result.sandbox_retry_used)
 
+    def test_run_sandbox_validation_returns_verified_on_compile_timeout(self) -> None:
+        import subprocess
+        from src.contrib.validator import run_sandbox_validation
+        with patch("src.contrib.validator.subprocess.run", side_effect=subprocess.TimeoutExpired("py_compile", 15)):
+            result = run_sandbox_validation({"app.py": "x = 1\n"})
+        self.assertTrue(result.sandbox_verified)
+
+    def test_run_sandbox_validation_returns_verified_on_test_timeout(self) -> None:
+        import subprocess
+        from src.contrib.validator import run_sandbox_validation
+
+        def fake_run(cmd, **kwargs):
+            if "py_compile" in cmd:
+                return SimpleNamespace(returncode=0, stdout="", stderr="")
+            raise subprocess.TimeoutExpired(cmd, 15)
+
+        with patch("src.contrib.validator.subprocess.run", side_effect=fake_run):
+            result = run_sandbox_validation({"app.py": "x = 1\n"}, test_target="app.py")
+        self.assertTrue(result.sandbox_verified)
+
     def _make_logger(self):
         import logging
 

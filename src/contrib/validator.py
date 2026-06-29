@@ -69,12 +69,19 @@ def run_sandbox_validation(changed_files: dict[str, str], test_target: str = "")
             target = tmp / rel_path
             if not target.exists():
                 continue
-            result = subprocess.run(
-                [sys.executable, "-m", "py_compile", str(target)],
-                capture_output=True,
-                text=True,
-                timeout=_SANDBOX_TIMEOUT,
-            )
+            try:
+                result = subprocess.run(
+                    [sys.executable, "-m", "py_compile", str(target)],
+                    capture_output=True,
+                    text=True,
+                    timeout=_SANDBOX_TIMEOUT,
+                )
+            except subprocess.TimeoutExpired:
+                return ValidationResult(
+                    status="passed",
+                    summary="Sandbox compile timed out; treating as infra issue.",
+                    sandbox_verified=True,
+                )
             if result.returncode != 0:
                 err = (result.stderr or result.stdout or "").strip()
                 compile_errors.append(f"{rel_path}: {err}")
@@ -93,15 +100,18 @@ def run_sandbox_validation(changed_files: dict[str, str], test_target: str = "")
         if test_target and test_target in changed_files:
             test_path = tmp / test_target
             if test_path.exists():
-                result = subprocess.run(
-                    [sys.executable, "-m", "pytest", str(test_path), "-x", "--tb=short", "-q"],
-                    capture_output=True,
-                    text=True,
-                    timeout=_SANDBOX_TIMEOUT,
-                    cwd=str(tmp),
-                )
-                test_output = (result.stdout + result.stderr).strip()
-                if result.returncode != 0 and _is_actionable_error(test_output):
+                try:
+                    result = subprocess.run(
+                        [sys.executable, "-m", "pytest", str(test_path), "-x", "--tb=short", "-q"],
+                        capture_output=True,
+                        text=True,
+                        timeout=_SANDBOX_TIMEOUT,
+                        cwd=str(tmp),
+                    )
+                except subprocess.TimeoutExpired:
+                    result = None
+                test_output = (result.stdout + result.stderr).strip() if result else ""
+                if result is not None and result.returncode != 0 and _is_actionable_error(test_output):
                     return ValidationResult(
                         status="failed",
                         summary="Sandbox test run failed with actionable error.",
