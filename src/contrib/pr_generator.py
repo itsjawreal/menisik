@@ -2158,12 +2158,15 @@ def _fetch_pr_comments(full_name: str, pr_number: int) -> list[dict]:
     """Fetch all issue-level comments on a PR (not review comments)."""
     import subprocess
     from src.github.fork import gh_safe_env
-    r = subprocess.run(
-        ["gh", "api", f"repos/{full_name}/issues/{pr_number}/comments",
-         "--jq", "[.[] | {id: .id, user: .user.login, body: .body, created_at: .created_at}]"],
-        capture_output=True, text=True, encoding="utf-8", timeout=20,
-        env=gh_safe_env(),
-    )
+    try:
+        r = subprocess.run(
+            ["gh", "api", f"repos/{full_name}/issues/{pr_number}/comments",
+             "--jq", "[.[] | {id: .id, user: .user.login, body: .body, created_at: .created_at}]"],
+            capture_output=True, text=True, encoding="utf-8", timeout=20,
+            env=gh_safe_env(),
+        )
+    except Exception:
+        return []
     if r.returncode != 0:
         return []
     try:
@@ -2176,12 +2179,15 @@ def _fetch_pr_review_comments(full_name: str, pr_number: int) -> list[dict]:
     """Fetch inline review comments (on specific lines of code)."""
     import subprocess
     from src.github.fork import gh_safe_env
-    r = subprocess.run(
-        ["gh", "api", f"repos/{full_name}/pulls/{pr_number}/comments",
-         "--jq", "[.[] | {id: .id, user: .user.login, body: .body, path: .path, line: (.line // .original_line), created_at: .created_at}]"],
-        capture_output=True, text=True, encoding="utf-8", timeout=20,
-        env=gh_safe_env(),
-    )
+    try:
+        r = subprocess.run(
+            ["gh", "api", f"repos/{full_name}/pulls/{pr_number}/comments",
+             "--jq", "[.[] | {id: .id, user: .user.login, body: .body, path: .path, line: (.line // .original_line), created_at: .created_at}]"],
+            capture_output=True, text=True, encoding="utf-8", timeout=20,
+            env=gh_safe_env(),
+        )
+    except Exception:
+        return []
     if r.returncode != 0:
         return []
     try:
@@ -2194,12 +2200,15 @@ def _fetch_pr_reviews(full_name: str, pr_number: int) -> list[dict]:
     """Fetch PR review submissions (APPROVED, CHANGES_REQUESTED, COMMENTED)."""
     import subprocess
     from src.github.fork import gh_safe_env
-    r = subprocess.run(
-        ["gh", "api", f"repos/{full_name}/pulls/{pr_number}/reviews",
-         "--jq", "[.[] | {id: .id, user: .user.login, state: .state, body: .body, submitted_at: .submitted_at}]"],
-        capture_output=True, text=True, encoding="utf-8", timeout=20,
-        env=gh_safe_env(),
-    )
+    try:
+        r = subprocess.run(
+            ["gh", "api", f"repos/{full_name}/pulls/{pr_number}/reviews",
+             "--jq", "[.[] | {id: .id, user: .user.login, state: .state, body: .body, submitted_at: .submitted_at}]"],
+            capture_output=True, text=True, encoding="utf-8", timeout=20,
+            env=gh_safe_env(),
+        )
+    except Exception:
+        return []
     if r.returncode != 0:
         return []
     try:
