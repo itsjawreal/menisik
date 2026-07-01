@@ -381,6 +381,68 @@ class BuilderTargetPreflightTests(unittest.TestCase):
         self.assertEqual(event_details["risk_level"], "medium")
         mocked_notify.assert_called_once_with("PR queued: example/project - fix: app bug")
 
+    def test_submit_with_retry_retries_transient_fork_error_without_regenerating(self) -> None:
+        from src.github.fork import ForkError
+
+        calls = {"n": 0}
+
+        def flaky_submit() -> str:
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise ForkError("push failed: remote hung up unexpectedly")
+            return "pr-result"
+
+        with mock.patch("time.sleep"):
+            result = builder._submit_with_retry(flaky_submit, logging.getLogger("test"), "example/repo")
+
+        self.assertEqual(result, "pr-result")
+        self.assertEqual(calls["n"], 2)
+
+    def test_submit_with_retry_raises_immediately_on_existing_pr(self) -> None:
+        from src.github.fork import PRAlreadyExistsError
+
+        calls = {"n": 0}
+
+        def submit() -> str:
+            calls["n"] += 1
+            raise PRAlreadyExistsError("PR already open")
+
+        with mock.patch("time.sleep"):
+            with self.assertRaises(PRAlreadyExistsError):
+                builder._submit_with_retry(submit, logging.getLogger("test"), "example/repo")
+
+        self.assertEqual(calls["n"], 1)
+
+    def test_submit_with_retry_raises_immediately_on_deterministic_failure(self) -> None:
+        from src.github.fork import ForkError
+
+        calls = {"n": 0}
+
+        def submit() -> str:
+            calls["n"] += 1
+            raise ForkError("no actual diff — improved files are identical to originals")
+
+        with mock.patch("time.sleep"):
+            with self.assertRaises(ForkError):
+                builder._submit_with_retry(submit, logging.getLogger("test"), "example/repo")
+
+        self.assertEqual(calls["n"], 1)
+
+    def test_submit_with_retry_gives_up_after_max_attempts(self) -> None:
+        from src.github.fork import ForkError
+
+        calls = {"n": 0}
+
+        def submit() -> str:
+            calls["n"] += 1
+            raise ForkError("push failed: transient network error")
+
+        with mock.patch("time.sleep"):
+            with self.assertRaises(ForkError):
+                builder._submit_with_retry(submit, logging.getLogger("test"), "example/repo")
+
+        self.assertEqual(calls["n"], builder._SUBMIT_MAX_ATTEMPTS)
+
     def test_main_forwards_raw_argv_to_run_contribution_mode(self) -> None:
         # Regression: when invoked via contribute.py, sys.argv is ["rover", "run", "3"]
         # while raw_argv is ["--contrib", "--3"]. main() must forward raw_argv so that

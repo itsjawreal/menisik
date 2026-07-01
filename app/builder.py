@@ -557,6 +557,43 @@ def _is_terminal_generation_failure(exc: PRGeneratorError) -> bool:
     return any(marker in message for marker in terminal_markers)
 
 
+def _is_terminal_submission_failure(exc: ForkError) -> bool:
+    message = str(exc).lower()
+    terminal_markers = (
+        "no actual diff",
+        "verification failed",
+        "nothing to commit",
+    )
+    return any(marker in message for marker in terminal_markers)
+
+
+_SUBMIT_MAX_ATTEMPTS = 3
+
+
+def _submit_with_retry(submit, log: logging.Logger, repo_full_name: str):
+    """Retry transient fork/push/PR-create failures without regenerating the patch.
+
+    A generated patch is expensive; a submission hiccup (network, GitHub API)
+    should not cost another AI generation cycle. Deterministic failures
+    (empty diff, verification errors) and existing-PR signals raise immediately.
+    """
+    import time
+
+    for attempt in range(1, _SUBMIT_MAX_ATTEMPTS + 1):
+        try:
+            return submit()
+        except PRAlreadyExistsError:
+            raise
+        except ForkError as exc:
+            if _is_terminal_submission_failure(exc) or attempt == _SUBMIT_MAX_ATTEMPTS:
+                raise
+            log.warning(
+                "Submission attempt %d/%d failed for %s: %s — retrying same patch",
+                attempt, _SUBMIT_MAX_ATTEMPTS, repo_full_name, exc,
+            )
+            time.sleep(5 * attempt)
+
+
 def _changed_file_summary(changed_files: dict[str, str]) -> str:
     files = list(changed_files)
     if not files:
@@ -1104,13 +1141,17 @@ def run_contribution_mode(
         )
         try:
             if is_own:
-                pr_result = fix_and_push_own_repo(
-                    full_name=candidate.full_name,
-                    default_branch=candidate.default_branch,
-                    changed_files=improvement.changed_files,
-                    commit_msg=improvement.title,
-                    log=log,
-                    improvement_type=improvement.improvement_type,
+                pr_result = _submit_with_retry(
+                    lambda: fix_and_push_own_repo(
+                        full_name=candidate.full_name,
+                        default_branch=candidate.default_branch,
+                        changed_files=improvement.changed_files,
+                        commit_msg=improvement.title,
+                        log=log,
+                        improvement_type=improvement.improvement_type,
+                    ),
+                    log,
+                    candidate.full_name,
                 )
                 submitted += 1
                 print_ok(f"[{submitted}/{target}] own-repo fix pushed")
@@ -1125,14 +1166,18 @@ def run_contribution_mode(
                         {"pr_url": pr_result.pr_url, "pr_title": pr_result.pr_title, "kind": "own_repo"},
                     )
             else:
-                pr_result = fork_and_submit_pr(
-                    full_name=candidate.full_name,
-                    default_branch=candidate.default_branch,
-                    changed_files=improvement.changed_files,
-                    pr_title=improvement.title,
-                    pr_body=improvement.body,
-                    log=log,
-                    improvement_type=improvement.improvement_type,
+                pr_result = _submit_with_retry(
+                    lambda: fork_and_submit_pr(
+                        full_name=candidate.full_name,
+                        default_branch=candidate.default_branch,
+                        changed_files=improvement.changed_files,
+                        pr_title=improvement.title,
+                        pr_body=improvement.body,
+                        log=log,
+                        improvement_type=improvement.improvement_type,
+                    ),
+                    log,
+                    candidate.full_name,
                 )
                 save_pr_log(
                     pr_result,
