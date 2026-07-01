@@ -3,8 +3,8 @@
 ## Setup
 
 ```bash
-git clone https://github.com/itsjawreal/rover.git
-cd rover
+git clone https://github.com/itsjawreal/menisik.git
+cd menisik
 pip install -r requirements.txt
 cp .env.example .env          # fill in GITHUB_TOKEN and GITHUB_OWNER
 python -m app.builder --install-mcp

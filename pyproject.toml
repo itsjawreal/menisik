@@ -1,5 +1,5 @@
 [project]
-name = "rover"
+name = "menisik"
 version = "0.1.2"
 description = "Learning project: a GitHub contribution engine that drafts narrow patches through quality gates and leaves the submit decision to a human."
 readme = "README.md"
@@ -20,14 +20,18 @@ dependencies = [
 ]
 
 [project.scripts]
+menisik = "app.contribute:main"
+menisik-mcp = "src.contribution_mcp.server:main"
+menisik-daemon = "src.daemon.runner:main"
+# Deprecated aliases (kept through 0.1.x per the deprecation policy):
 rover = "app.contribute:main"
 rover-engine = "app.builder:main"
 rover-mcp = "src.contribution_mcp.server:main"
 rover-daemon = "src.daemon.runner:main"
 
 [project.urls]
-Homepage = "https://github.com/itsjawreal/rover"
-Repository = "https://github.com/itsjawreal/rover"
+Homepage = "https://github.com/itsjawreal/menisik"
+Repository = "https://github.com/itsjawreal/menisik"
 
 [build-system]
 requires = ["hatchling"]

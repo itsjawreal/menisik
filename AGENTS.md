@@ -31,7 +31,7 @@ Compatibility:
 
 Deprecation policy:
 
-- `rover-engine` and legacy `--pr*` flags are deprecated now.
+- The project was renamed from `rover` to `menisik`; `rover*` entry points and legacy `--pr*` flags are deprecated now.
 - They stay warning-only through `0.1.x`.
 - Earliest planned removal: `0.2.0` or next deliberately breaking CLI release.
 - `github-contribution-engine` OpenClaw compatibility paths remain supported until replacement integrations are proven stable.

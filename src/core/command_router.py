@@ -218,6 +218,7 @@ def _wants_live_submission(normalized: str) -> bool:
         return True
     return _matches_any(
         normalized,
+        "menisik run",
         "rover run",
         "submit",
         "open pr",

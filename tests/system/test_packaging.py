@@ -10,6 +10,13 @@ class PackagingTests(unittest.TestCase):
     def test_pyproject_declares_cli_and_mcp_scripts(self) -> None:
         text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
+        self.assertIn('name = "menisik"', text)
+        self.assertIn('menisik = "app.contribute:main"', text)
+        self.assertIn('menisik-mcp = "src.contribution_mcp.server:main"', text)
+
+    def test_pyproject_keeps_deprecated_rover_aliases_through_0_1_x(self) -> None:
+        text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
         self.assertIn('rover = "app.contribute:main"', text)
         self.assertIn('rover-engine = "app.builder:main"', text)
         self.assertIn('rover-mcp = "src.contribution_mcp.server:main"', text)

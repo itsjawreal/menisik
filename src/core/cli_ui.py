@@ -75,7 +75,7 @@ _STATUS_ICON  = {"open": "●", "merged": "✓", "closed": "✗"}
 
 def print_banner(version: str = _VERSION) -> None:
     _console.print()
-    _console.print(f"[bold green]♦ rover {version}[/]  [dim]{_TAGLINE}[/]")
+    _console.print(f"[bold green]♦ menisik {version}[/]  [dim]{_TAGLINE}[/]")
     _console.print()
 
 
@@ -171,7 +171,7 @@ def _doctor_workspace_detail(check_map: dict[str, object]) -> tuple[str, str]:
         else:
             detail = "project root ready · entrypoint looks healthy"
     else:
-        detail = "project root ready · check active rover entrypoint"
+        detail = "project root ready · check active menisik entrypoint"
     return status, detail
 
 
@@ -279,7 +279,7 @@ def print_styled_doctor(checks: list, *, verbose: bool = False) -> None:
                 _doctor_print_row(check.status, check.name, check.detail)
 
         print_blank()
-        print_item("Run `rover doctor --verbose` for full paths and raw checks.")
+        print_item("Run `menisik doctor --verbose` for full paths and raw checks.")
 
     print_blank()
     print_section("Summary")
@@ -297,7 +297,7 @@ def print_styled_prs(rows: list[dict], status_filter: str = "all") -> None:
     if not rows:
         label = f" ({status_filter})" if status_filter != "all" else ""
         print_section(f"Submitted PRs{label}")
-        print_item("No PRs found. Run: [bold]rover owner/repo[/]")
+        print_item("No PRs found. Run: [bold]menisik owner/repo[/]")
         print_blank()
         return
 
@@ -443,12 +443,12 @@ def print_styled_report(summaries: list[dict], queued: list[dict]) -> None:
 
     print_section("Next step")
     if queued:
-        print_item("[bold]rover run[/]   [dim]— consume the strongest queued opportunity[/]")
+        print_item("[bold]menisik run[/]   [dim]— consume the strongest queued opportunity[/]")
     elif latest.get("top_rejections"):
         top_reason = latest["top_rejections"][0][0]
         print_item(f"investigate rejection pattern [bold yellow]{top_reason}[/] before widening search")
     else:
-        print_item("[bold]rover run[/]   [dim]— start a new contribution cycle[/]")
+        print_item("[bold]menisik run[/]   [dim]— start a new contribution cycle[/]")
     print_blank()
 
 
@@ -493,7 +493,7 @@ def print_repo_inspect_overview(data: dict[str, object]) -> None:
 def print_repo_inspect_description(data: dict[str, object]) -> None:
     description = str(data.get("description", "") or "").strip()
     if description:
-        print_section("What Rover Found")
+        print_section("What Menisik Found")
         print_item("repo purpose and source surface summarized")
         print_info(description)
         print_blank()
@@ -641,20 +641,20 @@ def _choose_arrow(prompt: str, options: list[str]) -> str:
 
 def print_styled_help() -> None:
     commands = [
-        ("rover",                  "status dashboard"),
-        ("rover run",              "search and submit 1 PR"),
-        ("rover run 3",            "submit 3 PRs"),
-        ("rover owner/repo",       "target a specific repo"),
-        ("rover check",            "poll open PRs for updates"),
-        ("rover respond",          "reply to maintainer comments"),
-        ("rover report",           "run history + bottlenecks"),
-        ("rover list-prs",         "all submitted PRs"),
-        ("rover list-prs open",    "filter: open | merged | closed"),
-        ("rover inspect owner/repo", "analyze repo without submitting"),
-        ("rover doctor",           "verify setup"),
-        ("rover doctor --verbose", "show full paths and raw checks"),
-        ("rover setup",            "install / reconfigure environment"),
-        ("rover help",             "show this help"),
+        ("menisik",                  "status dashboard"),
+        ("menisik run",              "search and submit 1 PR"),
+        ("menisik run 3",            "submit 3 PRs"),
+        ("menisik owner/repo",       "target a specific repo"),
+        ("menisik check",            "poll open PRs for updates"),
+        ("menisik respond",          "reply to maintainer comments"),
+        ("menisik report",           "run history + bottlenecks"),
+        ("menisik list-prs",         "all submitted PRs"),
+        ("menisik list-prs open",    "filter: open | merged | closed"),
+        ("menisik inspect owner/repo", "analyze repo without submitting"),
+        ("menisik doctor",           "verify setup"),
+        ("menisik doctor --verbose", "show full paths and raw checks"),
+        ("menisik setup",            "install / reconfigure environment"),
+        ("menisik help",             "show this help"),
     ]
 
     flags = [
@@ -670,15 +670,15 @@ def print_styled_help() -> None:
     ]
 
     examples = [
-        ("rover run",                          "auto-find and submit 1 PR"),
-        ("rover run 3",                        "submit 3 PRs in sequence"),
-        ("rover owner/repo",                   "target a pinned repo"),
-        ("rover run --goal upgrade",            "feature upgrade mode"),
-        ("rover run --goal add",               "feature add mode"),
-        ("rover run --first-pr",               "bias toward beginner-friendly repos"),
-        ("rover run owner/repo --override-limits", "target repo while bypassing .env filters"),
-        ("rover run --dry-run",                "preview patch, skip submission"),
-        ("rover run 3 --goal bug --dry-run",   "3 PRs, bugfix mode, dry run"),
+        ("menisik run",                          "auto-find and submit 1 PR"),
+        ("menisik run 3",                        "submit 3 PRs in sequence"),
+        ("menisik owner/repo",                   "target a pinned repo"),
+        ("menisik run --goal upgrade",            "feature upgrade mode"),
+        ("menisik run --goal add",               "feature add mode"),
+        ("menisik run --first-pr",               "bias toward beginner-friendly repos"),
+        ("menisik run owner/repo --override-limits", "target repo while bypassing .env filters"),
+        ("menisik run --dry-run",                "preview patch, skip submission"),
+        ("menisik run 3 --goal bug --dry-run",   "3 PRs, bugfix mode, dry run"),
     ]
 
     print_section("Commands")
@@ -741,7 +741,7 @@ def print_status_dashboard() -> None:
 
     left = Panel(
         status_lines,
-        title=f"[bold green]Welcome back, {owner}![/]" if owner else "[bold green]rover[/]",
+        title=f"[bold green]Welcome back, {owner}![/]" if owner else "[bold green]menisik[/]",
         title_align="left",
         border_style="green",
         padding=(0, 1),
@@ -750,16 +750,16 @@ def print_status_dashboard() -> None:
     # ── Right panel: quick start ──────────────────────────────
     cmd_lines = Text()
     cmds = [
-        ("rover run",          "search and submit a PR"),
-        ("rover run 3",        "submit 3 PRs"),
-        ("rover owner/repo",   "target a specific repo"),
-        ("rover check",        "poll open PRs + feedback"),
-        ("rover report",       "run history"),
-        ("rover list-prs",     "all submitted PRs"),
-        ("rover inspect repo", "analyze without submitting"),
-        ("rover doctor",       "check setup"),
-        ("rover doctor --verbose", "full diagnostics"),
-        ("rover setup",        "install / reconfigure"),
+        ("menisik run",          "search and submit a PR"),
+        ("menisik run 3",        "submit 3 PRs"),
+        ("menisik owner/repo",   "target a specific repo"),
+        ("menisik check",        "poll open PRs + feedback"),
+        ("menisik report",       "run history"),
+        ("menisik list-prs",     "all submitted PRs"),
+        ("menisik inspect repo", "analyze without submitting"),
+        ("menisik doctor",       "check setup"),
+        ("menisik doctor --verbose", "full diagnostics"),
+        ("menisik setup",        "install / reconfigure"),
     ]
     for cmd, desc in cmds:
         cmd_lines.append(f"  {cmd:<24}", style="bold cyan")

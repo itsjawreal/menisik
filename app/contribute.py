@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """Natural subcommand interface for the contribution engine.
 
-  rover                     # status dashboard
-  rover setup               # guided install for the current platform
-  rover uninstall           # guided uninstall/reset for the current platform
-  rover profile             # show active GitHub login identity
-  rover doctor              # check setup
-  rover doctor --verbose    # show full paths and raw checks
-  rover run [N]             # search and submit N PRs (default 1)
-  rover check               # poll open PR statuses
-  rover report              # show run history
-  rover respond             # handle maintainer comments
-  rover list-prs            # all submitted PRs
-  rover list-prs open       # filter: open | merged | closed
-  rover inspect owner/repo  # analyze a repo without submitting
-  rover scan owner/repo     # deterministic bug/security scan
-  rover owner/repo          # target a specific repo
-  rover --help              # full flag reference
+  menisik                     # status dashboard
+  menisik setup               # guided install for the current platform
+  menisik uninstall           # guided uninstall/reset for the current platform
+  menisik profile             # show active GitHub login identity
+  menisik doctor              # check setup
+  menisik doctor --verbose    # show full paths and raw checks
+  menisik run [N]             # search and submit N PRs (default 1)
+  menisik check               # poll open PR statuses
+  menisik report              # show run history
+  menisik respond             # handle maintainer comments
+  menisik list-prs            # all submitted PRs
+  menisik list-prs open       # filter: open | merged | closed
+  menisik inspect owner/repo  # analyze a repo without submitting
+  menisik scan owner/repo     # deterministic bug/security scan
+  menisik owner/repo          # target a specific repo
+  menisik --help              # full flag reference
 """
 from __future__ import annotations
 
@@ -234,7 +234,7 @@ def main() -> None:
     # No args → status dashboard
     if not argv:
         if json_mode:
-            print_err("`rover --json` requires an explicit command")
+            print_err("`menisik --json` requires an explicit command")
             return
         print_banner()
         print_status_dashboard()
@@ -303,7 +303,7 @@ def main() -> None:
         if rest:
             verbose_flags = {"--verbose", "-v"}
             if any(arg not in verbose_flags for arg in rest):
-                print_err("Invalid doctor args. Use: rover doctor [--verbose]")
+                print_err("Invalid doctor args. Use: menisik doctor [--verbose]")
                 return
             verbose = True
         _cmd_doctor(verbose=verbose)
@@ -333,8 +333,8 @@ def main() -> None:
         return
 
     # run [N] [owner/repo] [flags...] → search-mode or targeted contrib
-    # e.g. rover run 3 --goal upgrade --dry-run
-    #      rover run --goal add owner/repo
+    # e.g. menisik run 3 --goal upgrade --dry-run
+    #      menisik run --goal add owner/repo
     if first == "run":
         _GOAL_ALIASES = {
             "upgrade": "feature_upgrade",

@@ -375,7 +375,7 @@ python -m app.builder --repo-inspect owner/repo
 
 Deprecated paths:
 
-- `rover-engine`
+- `rover`, `rover-engine`, `rover-mcp`, `rover-daemon` (pre-rename aliases of the `menisik*` entry points)
 - legacy `--pr*` flags
 
 Deprecated paths are warning-only through `0.1.x`.

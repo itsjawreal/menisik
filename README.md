@@ -1,10 +1,16 @@
-# Rover
+# Menisik
 
-[![CI](https://github.com/itsjawreal/rover/actions/workflows/ci.yml/badge.svg)](https://github.com/itsjawreal/rover/actions/workflows/ci.yml)
+[![CI](https://github.com/itsjawreal/menisik/actions/workflows/ci.yml/badge.svg)](https://github.com/itsjawreal/menisik/actions/workflows/ci.yml)
 
 > A learning project: a GitHub contribution engine that scans repos, drafts focused patches, runs them through quality gates, and leaves the submit decision to a human.
 
-Rover is a personal learning project exploring whether an AI engine can find and prepare narrow open-source contributions. It is **not** a production-ready autonomous contributor — see [Honest status](#honest-status) below.
+Menisik is a personal learning project exploring whether an AI engine can find and prepare narrow open-source contributions. It is **not** a production-ready autonomous contributor — see [Honest status](#honest-status) below.
+
+## Why the name?
+
+*Menisik* is Indonesian for darning: mending fabric with small, careful, near-invisible stitches. That is the philosophy of this engine — it does not redesign the garment, it finds a small hole and closes it neatly, one stitch (one narrow patch) at a time.
+
+This project was formerly named **rover**. The `rover`, `rover-engine`, `rover-mcp`, and `rover-daemon` commands remain as deprecated aliases through `0.1.x` (see [Deprecation Policy](#deprecation-policy)).
 
 ## What It Does
 
@@ -30,14 +36,14 @@ The goal is contribution quality over volume — behave like a careful contribut
 ## Main Commands
 
 ```bash
-rover                          # status dashboard
-rover doctor                   # check setup
-rover check                    # poll open PR statuses
-rover list-prs                 # all submitted PRs
-rover list-prs open            # filter by status
-rover report                   # run history + rejection analysis
-rover inspect owner/repo       # analyze a repo without submitting
-rover owner/repo               # target a specific repo
+menisik                          # status dashboard
+menisik doctor                   # check setup
+menisik check                    # poll open PR statuses
+menisik list-prs                 # all submitted PRs
+menisik list-prs open            # filter by status
+menisik report                   # run history + rejection analysis
+menisik inspect owner/repo       # analyze a repo without submitting
+menisik owner/repo               # target a specific repo
 ```
 
 Advanced / low-level flags via `python -m app.builder`:
@@ -55,8 +61,8 @@ python -m app.builder --doctor
 
 Compatibility note:
 
-- `rover-engine` still exists as a deprecated alias for older automation
-- prefer `rover ...` or `python -m app.builder ...` for new usage
+- `rover`, `rover-engine`, `rover-mcp`, and `rover-daemon` still exist as deprecated aliases from the pre-rename era
+- prefer `menisik ...` or `python -m app.builder ...` for new usage
 
 ## Deprecation Policy
 
@@ -64,33 +70,36 @@ Compatibility layers are kept only when they still protect active operator workf
 
 Current policy:
 
-- `rover-engine` is deprecated now and should be treated as legacy automation only.
+- The project was renamed from **rover** to **menisik**. `rover`, `rover-engine`, `rover-mcp`, and `rover-daemon` are deprecated aliases of the `menisik*` entry points.
 - `--pr`, `--pr-check`, and `--pr-respond` are deprecated now; prefer `--contrib`, `--contrib-check`, and `--contrib-respond`.
 - Warning-only period: all `0.1.x` releases.
 - Planned removal target: `0.2.0` or the next intentionally breaking CLI release.
 
 Compatibility layers that remain supported without a removal date yet:
 
-- OpenClaw compatibility skill paths under `github-contribution-engine` as aliases only; canonical OpenClaw/Hermes integration name is `rover`
+- OpenClaw compatibility skill paths under `github-contribution-engine` as aliases only.
+- The MCP server still registers as `rover` and installers still write `rover`-named integration paths (`mcp.servers.rover`, skill/wrapper paths); renaming those would break existing MCP client configs, so they migrate to `menisik` at `0.2.0`.
 
-Those two layers stay because they still protect real integrations, not just old command muscle memory.
+These layers stay because they still protect real integrations, not just old command muscle memory.
 
 Natural-language routing is also available for channel-style inputs:
 
 - `make 1 contribution`
 - `run 1 pr to owner/repo`
-- `Rover, fix bug in owner/repo`
-- `Rover, update deps in owner/repo`
+- `Menisik, fix bug in owner/repo`
+- `Menisik, update deps in owner/repo`
 - `create one pull request to https://github.com/owner/repo`
 - `check repo owner/repo first`
+
+(The routing is intent-based, so `Rover, fix bug in owner/repo` still works too.)
 
 These phrases are mapped to canonical engine actions like `contrib_once`, `contrib_targeted`, `repo_inspect`, `contrib_check`, and `doctor`.
 For safety, natural-language contribution requests default to preview mode unless the request explicitly asks for live submission.
 
-When a prompt is ambiguous or the repo slug is not in `owner/repo` format, Rover falls back to a safe `doctor` action at low confidence rather than guessing a target:
+When a prompt is ambiguous or the repo slug is not in `owner/repo` format, Menisik falls back to a safe `doctor` action at low confidence rather than guessing a target:
 
 ```
-# Input: "Rover, fix bug in repo-abc"
+# Input: "Menisik, fix bug in repo-abc"
 INFO  Natural-language command mapped to action=doctor repo=<search> count=1 dry_run=True confidence=low
 INFO  [rationale] Repo token "repo-abc" does not match owner/repo format — skipping as target.
 INFO  [rationale] No unambiguous action inferred from prompt — defaulting to a safe doctor action.
@@ -99,7 +108,7 @@ INFO  [rationale] No unambiguous action inferred from prompt — defaulting to a
 Prompts that do resolve cleanly log at normal confidence:
 
 ```
-# Input: "Rover, fix bug in owner/repo"
+# Input: "Menisik, fix bug in owner/repo"
 INFO  Natural-language command mapped to action=contrib_targeted repo=owner/repo count=1 dry_run=True confidence=high
 INFO  [rationale] Explicit repo slug matched: owner/repo.
 INFO  [rationale] Fix-intent keyword detected — mapped to contrib_targeted.
@@ -213,7 +222,7 @@ Bootstrap on a Linux VPS:
 bash scripts/install_vps.sh
 ```
 
-Reset the local Rover install before re-testing setup flows:
+Reset the local Menisik install before re-testing setup flows:
 
 ```bash
 bash scripts/uninstall_vps.sh
@@ -234,7 +243,7 @@ powershell -ExecutionPolicy Bypass -File scripts/uninstall_windows.ps1
 One-line bootstrap from a fresh server:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsjawreal/rover/master/scripts/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/itsjawreal/menisik/master/scripts/bootstrap.sh | bash
 ```
 
 The guided setup can also install a native OpenClaw skill + wrapper in one flow:
@@ -384,7 +393,7 @@ MCP tools (17 total):
 | `contrib_report` | Formatted run summary with bottlenecks |
 | `doctor` | Check all required tools are installed and configured |
 | `inspect_repo` | Analyze a repo without submitting a PR |
-| `route_command` | Map natural language to a canonical Rover action |
+| `route_command` | Map natural language to a canonical Menisik action |
 | `run_contribution` | Start a contribution run in the background |
 | `contrib_once` | Start one search-mode contribution run |
 | `contrib_targeted` | Start one targeted contribution run |
@@ -410,24 +419,24 @@ python -m src.contribution_mcp
 python -m app.builder --install-openclaw
 ```
 
-**Hermes and similar agent shells** — point them at the same `rover-mcp` stdio server and start from `route_command` for natural-language chat requests. Operator notes live in [docs/agents/hermes.md](docs/agents/hermes.md).
+**Hermes and similar agent shells** — point them at the same `menisik-mcp` stdio server (or the deprecated `rover-mcp` alias) and start from `route_command` for natural-language chat requests. Operator notes live in [docs/agents/hermes.md](docs/agents/hermes.md).
 
 Installable path:
 
 ```bash
-uv tool install git+https://github.com/itsjawreal/rover.git
+uv tool install git+https://github.com/itsjawreal/menisik.git
 ```
 
 After install, the MCP entrypoint becomes:
 
 ```bash
-rover-mcp
+menisik-mcp
 ```
 
 And the main contribution CLI becomes:
 
 ```bash
-rover --doctor
+menisik --doctor
 ```
 
 MCP config for Claude Desktop or other MCP clients (installed via `uv`):
@@ -435,12 +444,12 @@ MCP config for Claude Desktop or other MCP clients (installed via `uv`):
 ```json
 {
   "mcpServers": {
-    "rover": {
+    "menisik": {
       "command": "uv",
       "args": [
         "tool", "run",
-        "--from", "git+https://github.com/itsjawreal/rover.git",
-        "rover-mcp"
+        "--from", "git+https://github.com/itsjawreal/menisik.git",
+        "menisik-mcp"
       ]
     }
   }
@@ -452,10 +461,10 @@ MCP config for local WSL installs (already provided in `.mcp.json`):
 ```json
 {
   "mcpServers": {
-    "rover": {
+    "menisik": {
       "command": "wsl",
       "args": ["-d", "Ubuntu-20.04", "--", "bash", "-c",
-               "cd /path/to/rover && python3 -m src.contribution_mcp.server"],
+               "cd /path/to/menisik && python3 -m src.contribution_mcp.server"],
       "type": "stdio"
     }
   }
