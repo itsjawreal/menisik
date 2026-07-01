@@ -19,6 +19,10 @@ from src.contrib.pr_generator import (
     _classify_patch_shape,
     _duplicate_patch_family_rejection,
     _discover_opportunities,
+    _fetch_branch_files,
+    _fetch_pr_comments,
+    _fetch_pr_review_comments,
+    _fetch_pr_reviews,
     _acceptance_score,
     _check_pr_evidence_quality,
     _delete_fork,
@@ -26,6 +30,7 @@ from src.contrib.pr_generator import (
     _get_lane_preset,
     _matches_contribution_lane,
     _normalize_queries,
+    _parse_pr_number,
     _recent_pr_recon,
     _self_review_test_layout,
     _self_review_diff,
@@ -42,6 +47,8 @@ from src.contrib.pr_generator import (
     get_pr_submitted_repos,
     save_pr_log,
 )
+from src.contrib.pr_generator import generate_pr_response
+from src.github.fork import ForkError
 from src.github.scraper import RepoCandidate, ScraperError
 
 
@@ -91,6 +98,29 @@ class PRGeneratorHardeningTests(unittest.TestCase):
                 ("python", "plain custom query"),
             ],
         )
+
+    def test_parse_pr_number_accepts_trailing_slash_query_and_fragment(self) -> None:
+        self.assertEqual(_parse_pr_number("https://github.com/o/r/pull/123"), 123)
+        self.assertEqual(_parse_pr_number("https://github.com/o/r/pull/123/"), 123)
+        self.assertEqual(_parse_pr_number("https://github.com/o/r/pull/123?foo=bar"), 123)
+        self.assertEqual(_parse_pr_number("https://github.com/o/r/pull/123#discussion"), 123)
+        self.assertIsNone(_parse_pr_number("https://github.com/o/r/issues/123"))
+
+    def test_fetch_branch_files_skips_missing_fork_or_branch(self) -> None:
+        with patch("src.contrib.pr_generator.subprocess.run") as mocked_run:
+            self.assertEqual(_fetch_branch_files("", "branch", ["a.py"]), {})
+            self.assertEqual(_fetch_branch_files("owner/repo", "", ["a.py"]), {})
+            self.assertEqual(_fetch_branch_files("owner/repo", "branch", []), {})
+
+        mocked_run.assert_not_called()
+
+    def test_pr_feedback_fetchers_skip_invalid_repo_name(self) -> None:
+        with patch("src.contrib.pr_generator.subprocess.run") as mocked_run:
+            self.assertEqual(_fetch_pr_comments("", 1), [])
+            self.assertEqual(_fetch_pr_review_comments("owneronly", 1), [])
+            self.assertEqual(_fetch_pr_reviews("", 1), [])
+
+        mocked_run.assert_not_called()
 
     def test_lane_match_respects_configured_keywords(self) -> None:
         matching = RepoCandidate(
@@ -1395,6 +1425,139 @@ class PRGeneratorHardeningTests(unittest.TestCase):
         with patch.dict("src.contrib.pr_generator._ACTIVE_RUN_METRICS", {"seen_title_families": []}, clear=True):
             self.assertIsNone(_duplicate_patch_family_rejection(result))
             self.assertIn("exception-policy wording", _duplicate_patch_family_rejection(result))
+
+    def test_check_all_prs_skips_reply_when_fix_push_fails(self) -> None:
+        # Regression: check_all_prs posted the reply comment even when push_to_branch
+        # failed, telling the maintainer a fix was applied when nothing was pushed.
+        data = {
+            "submitted": [
+                {
+                    "full_name": "example/upstream-repo",
+                    "pr_url": "https://github.com/example/upstream-repo/pull/42",
+                    "pr_title": "fix: sample",
+                    "fork_name": "currentuser/upstream-repo",
+                    "branch_name": "currentuser-patch-1",
+                    "files_changed": ["src/foo.py"],
+                    "submitted_at": "2026-04-28T10:00:00",
+                    "status": "open",
+                    "notified_merge": False,
+                    "last_seen_comment_id": 0,
+                }
+            ]
+        }
+        action = SimpleNamespace(
+            pr_url="https://github.com/example/upstream-repo/pull/42",
+            full_name="example/upstream-repo",
+            fork_name="currentuser/upstream-repo",
+            branch_name="currentuser-patch-1",
+            comment_id=0,
+            comment_body="please guard the config parser against None",
+            comment_author="maintainer",
+            reply="Fixed — added the missing guard.",
+            changed_files={"src/foo.py": "def foo():\n    return 1\n"},
+            commit_msg="fix: guard config parser",
+        )
+        seen_cmds: list[list[str]] = []
+
+        def fake_subprocess_run(cmd, **kwargs):
+            seen_cmds.append(list(cmd))
+            if "reviews" in " ".join(str(c) for c in cmd):
+                return SimpleNamespace(returncode=0, stdout="[]", stderr="")
+            return SimpleNamespace(
+                returncode=0,
+                stdout='{"state":"open","merged_at":null,"number":42}',
+                stderr="",
+            )
+
+        with patch("src.contrib.pr_generator.load_pr_log", return_value=data), \
+             patch("src.github.fork.get_current_github_login", return_value="currentuser"), \
+             patch("src.contrib.pr_generator._ENGINE_STORE"), \
+             patch("src.contrib.pr_generator._fetch_pr_comments", return_value=[
+                 {"id": 5, "user": "maintainer", "body": "please guard the config parser", "created_at": "2026-04-29T00:00:00Z"},
+             ]), \
+             patch("src.contrib.pr_generator._fetch_pr_review_comments", return_value=[]), \
+             patch("src.contrib.pr_generator._fetch_pr_reviews", return_value=[]), \
+             patch("src.contrib.pr_generator._classify_maintainer_comment", return_value="needs_change"), \
+             patch("src.contrib.pr_generator.generate_pr_response", return_value=action), \
+             patch("src.github.fork.push_to_branch", side_effect=ForkError("push failed: network error")), \
+             patch("src.core.notify.notify"), \
+             patch("src.contrib.pr_generator.PR_LOG_FILE"), \
+             patch("src.contrib.pr_generator.subprocess.run", side_effect=fake_subprocess_run):
+            check_all_prs(logging.getLogger("test"))
+
+        reply_cmds = [cmd for cmd in seen_cmds if "comment" in cmd]
+        self.assertEqual(reply_cmds, [])
+        # Feedback must be retried next run — last_seen_comment_id must not advance.
+        self.assertEqual(data["submitted"][0]["last_seen_comment_id"], 0)
+
+    def test_generate_pr_response_treats_null_reply_as_missing_field(self) -> None:
+        # Regression: a JSON-null "reply" passed the keys-present check and crashed
+        # with AttributeError on .strip() instead of raising PRGeneratorError.
+        entry = {
+            "full_name": "example/upstream-repo",
+            "pr_url": "https://github.com/example/upstream-repo/pull/42",
+            "pr_title": "fix: sample",
+            "fork_name": "currentuser/upstream-repo",
+            "branch_name": "currentuser-patch-1",
+            "files_changed": ["src/foo.py"],
+            "last_seen_comment_id": 0,
+        }
+        null_reply = '{"reply": null, "changed_files": {}, "commit_msg": ""}'
+
+        with patch("src.contrib.pr_generator._fetch_branch_files", return_value={}), \
+             patch("src.contrib.pr_generator.call_ai", side_effect=[null_reply, null_reply]), \
+             patch("src.contrib.pr_generator.time.sleep"):
+            with self.assertRaises(PRGeneratorError) as ctx:
+                generate_pr_response(entry, "please fix", "maintainer", logging.getLogger("test"))
+
+        self.assertIn("missing fields", str(ctx.exception))
+
+    def test_generate_pr_improvement_treats_null_title_as_missing_field(self) -> None:
+        # Regression: a JSON-null "pr_title"/"pr_body" passed the keys-present check
+        # and crashed with AttributeError on .strip() instead of a clean retry/reject.
+        store = self._make_store()
+        run_id = store.start_run(mode="contrib", target_count=1)
+        candidate = RepoCandidate(
+            name="sample",
+            full_name="example/sample",
+            description="Sample repo",
+            stars=10,
+            forks=2,
+            license="MIT",
+            url="https://github.com/example/sample",
+            default_branch="main",
+            pushed_days_ago=1,
+            topics=["python"],
+            files={"sample.py": "def run():\n    return 1\n"},
+        )
+        null_title_json = (
+            '{"improvement_type":"bug_fix","pr_title":null,'
+            '"pr_body":"## Summary\\nFix bug\\n## Why it matters\\nPrevents crash.\\n## Testing\\nAdded regression coverage.",'
+            '"rationale":"Prevents crash.",'
+            '"safety_proof":"The change only affects the failing path.",'
+            '"changed_files":{"sample.py":"def run():\\n    return 2\\n"}}'
+        )
+        opportunity = Opportunity(
+            repo_full_name=candidate.full_name,
+            target_file="sample.py",
+            pattern_type="missing_input_validation",
+            failure_mode="callers receive stale data on a valid invocation.",
+            evidence="the function body returns a hard-coded stale value",
+            patch_scope=1,
+            test_target="tests/test_sample.py",
+            acceptance_score=90,
+        )
+
+        with patch("src.contrib.pr_generator._ENGINE_STORE", store), \
+             patch("src.contrib.pr_generator._ACTIVE_RUN_ID", run_id), \
+             patch("src.contrib.pr_generator.generate_dep_update", return_value=None), \
+             patch("src.contrib.pr_generator._discover_opportunities", return_value=(opportunity, 123)), \
+             patch("src.contrib.pr_generator.call_ai", return_value=null_title_json), \
+             patch("src.contrib.pr_generator.time.sleep"):
+            with self.assertRaises(PRGeneratorError) as ctx:
+                generate_pr_improvement(candidate, logging.getLogger("test"))
+
+        self.assertIn("missing fields", str(ctx.exception))
 
     def test_check_all_prs_reviews_timeout_does_not_propagate_or_lose_data(self) -> None:
         # Regression: if the reviews fetch timed out, TimeoutExpired previously escaped the

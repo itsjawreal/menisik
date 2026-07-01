@@ -44,6 +44,7 @@ from src.github.scraper import (
 _GITHUB_URL_RE = re.compile(
     r"(?:https?://github\.com/)?([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\.git)?/?$"
 )
+_PR_NUMBER_RE = re.compile(r"/pull/(\d+)(?:[/?#].*)?$")
 
 
 def resolve_repo_full_name(repo_url: str) -> str:
@@ -51,6 +52,11 @@ def resolve_repo_full_name(repo_url: str) -> str:
     if not m:
         raise ScraperError(f"Cannot parse repo URL/name: {repo_url!r}")
     return m.group(1)
+
+
+def _parse_pr_number(pr_url: str) -> int | None:
+    m = _PR_NUMBER_RE.search((pr_url or "").strip().rstrip("/"))
+    return int(m.group(1)) if m else None
 
 
 def fetch_repo_metadata(repo_url: str, log: logging.Logger) -> tuple[str, dict]:
@@ -1907,16 +1913,19 @@ def check_pr_statuses(log: logging.Logger) -> None:
             continue
         seen_urls.add(pr_url)
 
-        full_name = entry.get("full_name", "")
+        full_name = str(entry.get("full_name", "") or "")
         pr_title  = entry.get("pr_title", "")
-        pr_number_match = re.search(r"/pull/(\d+)$", pr_url)
-        if not pr_number_match:
+        if "/" not in full_name:
+            log.warning("Skipping PR with invalid repo name: %s", pr_url)
             continue
-        pr_number = pr_number_match.group(1)
+        pr_number = _parse_pr_number(pr_url)
+        if pr_number is None:
+            continue
+        pr_number_str = str(pr_number)
 
         try:
             r = subprocess.run(
-                ["gh", "api", f"repos/{full_name}/pulls/{pr_number}"],
+                ["gh", "api", f"repos/{full_name}/pulls/{pr_number_str}"],
                 capture_output=True, text=True, encoding="utf-8", timeout=20,
                 env=gh_safe_env(),
             )
@@ -1943,7 +1952,7 @@ def check_pr_statuses(log: logging.Logger) -> None:
         if state == "OPEN":
             try:
                 rr = subprocess.run(
-                    ["gh", "api", f"repos/{full_name}/pulls/{pr_number}/reviews"],
+                    ["gh", "api", f"repos/{full_name}/pulls/{pr_number_str}/reviews"],
                     capture_output=True, text=True, encoding="utf-8", timeout=20,
                     env=gh_safe_env(),
                 )
@@ -2158,6 +2167,9 @@ def _fetch_pr_comments(full_name: str, pr_number: int) -> list[dict]:
     """Fetch all issue-level comments on a PR (not review comments)."""
     import subprocess
     from src.github.fork import gh_safe_env
+    full_name = (full_name or "").strip()
+    if "/" not in full_name:
+        return []
     try:
         r = subprocess.run(
             ["gh", "api", f"repos/{full_name}/issues/{pr_number}/comments",
@@ -2179,6 +2191,9 @@ def _fetch_pr_review_comments(full_name: str, pr_number: int) -> list[dict]:
     """Fetch inline review comments (on specific lines of code)."""
     import subprocess
     from src.github.fork import gh_safe_env
+    full_name = (full_name or "").strip()
+    if "/" not in full_name:
+        return []
     try:
         r = subprocess.run(
             ["gh", "api", f"repos/{full_name}/pulls/{pr_number}/comments",
@@ -2200,6 +2215,9 @@ def _fetch_pr_reviews(full_name: str, pr_number: int) -> list[dict]:
     """Fetch PR review submissions (APPROVED, CHANGES_REQUESTED, COMMENTED)."""
     import subprocess
     from src.github.fork import gh_safe_env
+    full_name = (full_name or "").strip()
+    if "/" not in full_name:
+        return []
     try:
         r = subprocess.run(
             ["gh", "api", f"repos/{full_name}/pulls/{pr_number}/reviews",
@@ -2226,6 +2244,10 @@ def _fetch_branch_files(fork_full: str, branch_name: str, file_paths: list[str])
     """Fetch specific files from a fork branch via GitHub API."""
     import subprocess
     from src.github.fork import gh_safe_env
+    fork_full = (fork_full or "").strip()
+    branch_name = (branch_name or "").strip()
+    if not fork_full or not branch_name or not file_paths:
+        return {}
     files = {}
     for path in file_paths[:10]:  # cap at 10 files
         try:
@@ -2408,6 +2430,8 @@ Respond with JSON only:
 
         required = {"reply", "changed_files", "commit_msg"}
         missing = required - set(result.keys())
+        if not missing and not isinstance(result.get("reply"), str):
+            missing = {"reply"}
         if missing:
             if attempt == 2:
                 raise PRGeneratorError(f"AI response missing fields: {missing}")
@@ -2439,7 +2463,7 @@ Respond with JSON only:
             comment_author=comment_author,
             reply=result["reply"].strip(),
             changed_files=changed_files,
-            commit_msg=result.get("commit_msg", "").strip(),
+            commit_msg=str(result.get("commit_msg") or "").strip(),
         )
 
     raise PRGeneratorError("All AI attempts failed")
@@ -2455,7 +2479,6 @@ def check_pr_feedback(log: logging.Logger) -> None:
       (if needed), pushes to existing branch, posts reply comment
     - Updates last_seen_comment_id in pr_log.json
     """
-    import re as _re
     import subprocess
     from src.github.fork import push_to_branch, ForkError
     from src.core.notify import notify
@@ -2481,7 +2504,12 @@ def check_pr_feedback(log: logging.Logger) -> None:
 
     open_entries = [
         e for e in entries
-        if e.get("status", "open") == "open" and "/pull/" in e.get("pr_url", "") and _matches_current_owner(e)
+        if (
+            e.get("status", "open") == "open"
+            and "/pull/" in e.get("pr_url", "")
+            and "/" in str(e.get("full_name", "") or "")
+            and _matches_current_owner(e)
+        )
     ]
 
     from src.core.cli_ui import print_section, print_item, print_ok, print_warn, print_blank
@@ -2504,10 +2532,9 @@ def check_pr_feedback(log: logging.Logger) -> None:
         full_name = entry["full_name"]
 
         # Parse PR number from URL
-        m = _re.search(r"/pull/(\d+)$", pr_url)
-        if not m:
+        pr_number = _parse_pr_number(pr_url)
+        if pr_number is None:
             continue
-        pr_number = int(m.group(1))
         last_seen = entry.get("last_seen_comment_id", 0)
 
         # Fetch all feedback types
@@ -2602,6 +2629,7 @@ def check_pr_feedback(log: logging.Logger) -> None:
 
             # Push code fix if AI produced changed files
             from src.github.fork import gh_safe_env
+            fix_pushed = False
             if action.changed_files:
                 log.info("  Applying %d file(s) to branch %s", len(action.changed_files), action.branch_name)
                 try:
@@ -2612,6 +2640,7 @@ def check_pr_feedback(log: logging.Logger) -> None:
                         commit_msg=action.commit_msg or f"fix: address feedback from @{latest['user']}",
                         log=log,
                     )
+                    fix_pushed = True
                     log.info("  revision_pushed: %s", pr_url)
                 except ForkError as e:
                     log.warning("  revision_push_failed: %s — %s", pr_url, e)
@@ -2619,6 +2648,9 @@ def check_pr_feedback(log: logging.Logger) -> None:
                 log.info("  revision_skipped_no_changes: %s", pr_url)
 
             # Post reply comment
+            if action.changed_files and not fix_pushed:
+                log.info("  reply_skipped_push_failed: %s", pr_url)
+                continue
             reply_text = action.reply
             try:
                 r = subprocess.run(
@@ -2661,7 +2693,6 @@ def check_pr_feedback(log: logging.Logger) -> None:
 
 def check_all_prs(log: logging.Logger) -> None:
     """Unified per-PR loop: status check + feedback check in one pass."""
-    import re as _re
     import subprocess
     from src.github.fork import ForkError, get_current_github_login, gh_safe_env, push_to_branch
     from src.core.notify import notify
@@ -2698,7 +2729,12 @@ def check_all_prs(log: logging.Logger) -> None:
     open_entries: list[dict] = []
     for e in entries:
         url = e.get("pr_url", "")
-        if e.get("status", "open") == "open" and "/pull/" in url and url not in seen_urls:
+        if (
+            e.get("status", "open") == "open"
+            and "/pull/" in url
+            and "/" in str(e.get("full_name", "") or "")
+            and url not in seen_urls
+        ):
             seen_urls.add(url)
             open_entries.append(e)
 
@@ -2714,11 +2750,10 @@ def check_all_prs(log: logging.Logger) -> None:
         full_name = entry.get("full_name", "")
         pr_title  = entry.get("pr_title", "")
 
-        m = _re.search(r"/pull/(\d+)$", pr_url)
-        if not m:
+        pr_number_int = _parse_pr_number(pr_url)
+        if pr_number_int is None:
             continue
-        pr_number_str = m.group(1)
-        pr_number_int = int(pr_number_str)
+        pr_number_str = str(pr_number_int)
 
         # ── Status check ──────────────────────────────────────
         try:
@@ -2910,6 +2945,11 @@ def check_all_prs(log: logging.Logger) -> None:
                 else:
                     log.info("  revision_skipped_no_changes: %s", pr_url)
 
+                if action.changed_files and not fix_pushed:
+                    log.info("  reply_skipped_push_failed: %s", pr_url)
+                    print_blank()
+                    time.sleep(0.5)
+                    continue
                 try:
                     rp = subprocess.run(
                         ["gh", "pr", "comment", pr_url, "--body", action.reply],
@@ -4339,6 +4379,9 @@ Respond with JSON only:
         # ── Field validation ──────────────────────────────────
         required = {"pr_title", "pr_body", "changed_files", "improvement_type", "rationale", "safety_proof"}
         missing = required - set(result.keys())
+        if not missing:
+            # Keys can exist with null values — treat non-string title/body as missing.
+            missing = {k for k in ("pr_title", "pr_body") if not isinstance(result.get(k), str)}
         if missing:
             _ENGINE_STORE.record_attempt(opportunity_id, "EXECUTE", attempt, "missing_fields", ",".join(sorted(missing)))
             if attempt == max_generate_attempts:
