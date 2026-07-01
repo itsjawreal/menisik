@@ -16,6 +16,7 @@ from src.github.fork import (
     _verify_dep_update_submission,
     _wait_for_fork_ready,
     get_current_github_login,
+    push_to_branch,
 )
 
 
@@ -116,6 +117,17 @@ class ForkSubmissionTests(unittest.TestCase):
                 _run(["gh", "api", "user"])
 
         self.assertIn("timed out", str(ctx.exception))
+
+    def test_push_to_branch_rejects_missing_target_before_clone(self) -> None:
+        with patch("src.github.fork._run") as mocked_run:
+            with self.assertRaisesRegex(ForkError, "fork_full is required"):
+                push_to_branch("", "branch", {"a.py": "x"}, "fix: test", logging.getLogger("test"))
+            with self.assertRaisesRegex(ForkError, "branch_name is required"):
+                push_to_branch("owner/repo", "", {"a.py": "x"}, "fix: test", logging.getLogger("test"))
+            with self.assertRaisesRegex(ForkError, "changed_files is required"):
+                push_to_branch("owner/repo", "branch", {}, "fix: test", logging.getLogger("test"))
+
+        mocked_run.assert_not_called()
 
     def test_local_verification_blocks_failed_test_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

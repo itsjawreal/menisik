@@ -463,6 +463,14 @@ def push_to_branch(
     existing PR branch without creating a new branch or new PR.
     Raises ForkError on any unrecoverable step.
     """
+    fork_full = (fork_full or "").strip()
+    branch_name = (branch_name or "").strip()
+    if not fork_full:
+        raise ForkError("fork_full is required to push feedback changes")
+    if not branch_name:
+        raise ForkError("branch_name is required to push feedback changes")
+    if not changed_files:
+        raise ForkError("changed_files is required to push feedback changes")
     repo_name = fork_full.split("/")[-1]
     tmp_dir = Path(tempfile.mkdtemp(prefix=f"respond_{repo_name}_"))
     owner_login = get_current_github_login()
