@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install rover-mcp as a systemd user service that starts automatically
+# Install menisik-mcp as a systemd user service that starts automatically
 # when WSL starts (with loginctl linger enabled).
 #
 # Usage:
@@ -10,10 +10,12 @@
 
 set -euo pipefail
 
-SERVICE_NAME="rover-daemon"
+SERVICE_NAME="menisik-daemon"
+LEGACY_SERVICE_NAME="rover-daemon"
 SERVICE_DIR="$HOME/.config/systemd/user"
 SERVICE_FILE="$SERVICE_DIR/$SERVICE_NAME.service"
-ROVER_MCP_BIN="$HOME/.local/bin/rover-mcp"
+LEGACY_SERVICE_FILE="$SERVICE_DIR/$LEGACY_SERVICE_NAME.service"
+MENISIK_MCP_BIN="$HOME/.local/bin/menisik-mcp"
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$PROJECT_DIR/logs"
 
@@ -22,28 +24,44 @@ _yellow() { printf '\033[0;33m%s\033[0m\n' "$*"; }
 _red()    { printf '\033[0;31m%s\033[0m\n' "$*"; }
 _bold()   { printf '\033[1m%s\033[0m\n' "$*"; }
 
+remove_legacy_service() {
+    if [[ -f "$LEGACY_SERVICE_FILE" ]]; then
+        _yellow "Removing legacy $LEGACY_SERVICE_NAME autostart service..."
+        systemctl --user stop    "$LEGACY_SERVICE_NAME" 2>/dev/null || true
+        systemctl --user disable "$LEGACY_SERVICE_NAME" 2>/dev/null || true
+        rm -f "$LEGACY_SERVICE_FILE"
+    fi
+}
+
 # ── Uninstall ────────────────────────────────────────────────
 if [[ "${1:-}" == "--uninstall" ]]; then
-    _yellow "Removing rover-mcp autostart service..."
+    _yellow "Removing menisik-mcp autostart service..."
     systemctl --user stop   "$SERVICE_NAME" 2>/dev/null || true
     systemctl --user disable "$SERVICE_NAME" 2>/dev/null || true
     rm -f "$SERVICE_FILE"
+    remove_legacy_service
     systemctl --user daemon-reload 2>/dev/null || true
-    _green "Done. rover-mcp autostart removed."
+    _green "Done. menisik-mcp autostart removed."
     exit 0
 fi
 
 # ── Preflight ────────────────────────────────────────────────
-_bold "=== Rover MCP Autostart Installer ==="
+_bold "=== Menisik MCP Autostart Installer ==="
 echo
 
-if [[ ! -f "$ROVER_MCP_BIN" ]]; then
-    # Fallback: venv bin
-    VENV_BIN="$PROJECT_DIR/.venv/bin/rover-mcp"
-    if [[ -f "$VENV_BIN" ]]; then
-        ROVER_MCP_BIN="$VENV_BIN"
-    else
-        _red "rover-mcp not found at $HOME/.local/bin/rover-mcp"
+if [[ ! -f "$MENISIK_MCP_BIN" ]]; then
+    # Fallbacks: venv bin, then the deprecated rover-mcp spellings
+    for candidate in \
+        "$PROJECT_DIR/.venv/bin/menisik-mcp" \
+        "$HOME/.local/bin/rover-mcp" \
+        "$PROJECT_DIR/.venv/bin/rover-mcp"; do
+        if [[ -f "$candidate" ]]; then
+            MENISIK_MCP_BIN="$candidate"
+            break
+        fi
+    done
+    if [[ ! -f "$MENISIK_MCP_BIN" ]]; then
+        _red "menisik-mcp not found at $HOME/.local/bin/menisik-mcp"
         _red "Run 'pip install -e .' or the install script first."
         exit 1
     fi
@@ -59,18 +77,18 @@ mkdir -p "$SERVICE_DIR" "$LOG_DIR"
 # ── Write service file ───────────────────────────────────────
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=Rover MCP Server
+Description=Menisik MCP Server
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=$PROJECT_DIR
-ExecStart=$ROVER_MCP_BIN
+ExecStart=$MENISIK_MCP_BIN
 Restart=on-failure
 RestartSec=10
-StandardOutput=append:$LOG_DIR/rover-mcp.log
-StandardError=append:$LOG_DIR/rover-mcp.log
+StandardOutput=append:$LOG_DIR/menisik-mcp.log
+StandardError=append:$LOG_DIR/menisik-mcp.log
 Environment=HOME=$HOME
 
 [Install]
@@ -78,6 +96,9 @@ WantedBy=default.target
 EOF
 
 _green "Service file written: $SERVICE_FILE"
+
+# Drop the pre-rename service so the daemon is not registered twice.
+remove_legacy_service
 
 # ── Enable + start ───────────────────────────────────────────
 systemctl --user daemon-reload
@@ -91,11 +112,11 @@ fi
 
 sleep 1
 if systemctl --user is-active --quiet "$SERVICE_NAME"; then
-    _green "rover-mcp is running (systemd user service)."
+    _green "menisik-mcp is running (systemd user service)."
 else
-    _yellow "rover-mcp may not have started yet. Check with:"
-    echo "  systemctl --user status rover-mcp"
-    echo "  tail -f $LOG_DIR/rover-mcp.log"
+    _yellow "menisik-mcp may not have started yet. Check with:"
+    echo "  systemctl --user status $SERVICE_NAME"
+    echo "  tail -f $LOG_DIR/menisik-mcp.log"
 fi
 
 echo
@@ -109,4 +130,4 @@ echo "Or manually add this to Windows Task Scheduler:"
 echo "  Trigger          : At log on"
 echo "  Action (Execute) : C:\\Users\\%USERNAME%\\AppData\\Local\\Programs\\Python\\Python311\\pythonw.exe"
 echo "  Arguments        : -m src.daemon"
-echo "  Start in         : \\\\wsl.localhost\\Ubuntu-20.04\\home\\$(whoami)\\project\\rover"
+echo "  Start in         : \\\\wsl.localhost\\Ubuntu-20.04\\home\\$(whoami)\\project\\menisik"

@@ -19,7 +19,7 @@ C_YELLOW=$'\033[1;33m'
 C_RED=$'\033[1;31m'
 C_MAGENTA=$'\033[1;35m'
 
-log()  { printf '%s[rover]%s %s\n' "$C_BLUE" "$C_RESET" "$*"; }
+log()  { printf '%s[menisik]%s %s\n' "$C_BLUE" "$C_RESET" "$*"; }
 ok()   { printf '%s[ok]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
 warn() { printf '%s[warn]%s %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
 todo() { printf '  - %s\n' "$*"; }
@@ -103,20 +103,23 @@ remove_openclaw_assets() {
   local roots=("$OPENCLAW_HOME" "$ALT_OPENCLAW_HOME")
   local root
   for root in "${roots[@]}"; do
-    remove_path "$root/workspace/skills/rover" "OpenClaw Rover workspace skill"
-    remove_path "$root/skills/rover" "OpenClaw Rover fallback skill"
+    remove_path "$root/workspace/skills/menisik" "OpenClaw Menisik workspace skill"
+    remove_path "$root/skills/menisik" "OpenClaw Menisik fallback skill"
+    remove_path "$root/workspace/skills/rover" "OpenClaw legacy Rover workspace skill"
+    remove_path "$root/skills/rover" "OpenClaw legacy Rover fallback skill"
     remove_path "$root/workspace/skills/github-contribution-engine" "OpenClaw workspace skill"
     remove_path "$root/skills/github-contribution-engine" "OpenClaw fallback skill"
-    remove_path "$root/tools/rover.py" "OpenClaw Rover wrapper"
+    remove_path "$root/tools/menisik.py" "OpenClaw Menisik wrapper"
+    remove_path "$root/tools/rover.py" "OpenClaw legacy Rover wrapper"
     remove_path "$root/tools/contribution.py" "OpenClaw wrapper"
   done
 }
 
-printf '%srover uninstall/reset%s\n\n' "$C_BLUE" "$C_RESET"
-warn "This script removes Rover-local install artifacts so you can test setup again from a clean slate."
-warn "Review each prompt carefully. Choosing Yes will permanently delete the selected local Rover files or directories."
+printf '%smenisik uninstall/reset%s\n\n' "$C_BLUE" "$C_RESET"
+warn "This script removes Menisik-local install artifacts so you can test setup again from a clean slate."
+warn "Review each prompt carefully. Choosing Yes will permanently delete the selected local Menisik files or directories."
 
-initial_choice="$(choose_option "Warning: this reset flow can permanently delete selected local Rover files, directories, and integration artifacts.
+initial_choice="$(choose_option "Warning: this reset flow can permanently delete selected local Menisik files, directories, and integration artifacts.
 
 Choose how to proceed:" \
   "Continue uninstall/reset" \
@@ -131,7 +134,7 @@ if confirm "Remove Python virtualenv at $VENV_DIR?"; then
   remove_path "$VENV_DIR" "virtualenv"
 fi
 
-if confirm "Remove Rover runtime state (data, logs, runs, stream partials)?"; then
+if confirm "Remove Menisik runtime state (data, logs, runs, stream partials)?"; then
   remove_path "$DATA_DIR" "data dir"
   remove_path "$LOG_DIR" "logs dir"
   remove_path "$RUNS_DIR" "runs dir"
@@ -142,7 +145,7 @@ if confirm "Remove local MCP config at $MCP_FILE?"; then
   remove_path "$MCP_FILE" ".mcp.json"
 fi
 
-if confirm "Remove OpenClaw skill and wrapper installed by Rover?"; then
+if confirm "Remove OpenClaw skill and wrapper installed by Menisik?"; then
   remove_openclaw_assets
 fi
 
@@ -152,11 +155,11 @@ fi
 
 printf '\n'
 if [ "$CHANGES_MADE" -eq 1 ]; then
-  ok "Rover uninstall/reset complete"
+  ok "Menisik uninstall/reset complete"
   printf '%sNext steps%s\n' "$C_BLUE" "$C_RESET"
   todo "Optional: run 'gh auth logout -h github.com' if you also want to reset GitHub CLI auth"
   todo "Optional: run 'codex logout' or 'claude logout' if you want to re-test backend login flows"
   todo "Reinstall with: bash scripts/install_vps.sh"
 else
-  warn "No changes were made. Rover uninstall/reset was skipped."
+  warn "No changes were made. Menisik uninstall/reset was skipped."
 fi

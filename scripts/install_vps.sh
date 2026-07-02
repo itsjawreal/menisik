@@ -34,11 +34,14 @@ venv_activate_script() {
 venv_engine_bin() {
   local bin_dir
   bin_dir="$(venv_bin_dir)"
-  if [ -x "$bin_dir/rover-engine.exe" ]; then
-    printf '%s' "$bin_dir/rover-engine.exe"
-  else
-    printf '%s' "$bin_dir/rover-engine"
-  fi
+  local candidate
+  for candidate in menisik-engine.exe menisik-engine rover-engine.exe; do
+    if [ -x "$bin_dir/$candidate" ]; then
+      printf '%s' "$bin_dir/$candidate"
+      return 0
+    fi
+  done
+  printf '%s' "$bin_dir/rover-engine"
 }
 
 if [ -t 1 ]; then
@@ -65,7 +68,7 @@ on_interrupt() {
 trap on_interrupt INT
 
 banner() {
-  printf '\n%s%s♦ rover setup%s\n' "$C_BOLD" "$C_GREEN" "$C_RESET"
+  printf '\n%s%s♦ menisik setup%s\n' "$C_BOLD" "$C_GREEN" "$C_RESET"
   printf '%sautonomous GitHub contribution agent — installer%s\n\n' "$C_BLUE" "$C_RESET"
 }
 
@@ -476,10 +479,10 @@ install_codex_if_requested() {
     if codex_cmd_is_windows_path "$existing_cmd"; then
       warn "Found Codex CLI at $existing_cmd from a Windows-mounted PATH."
       hint "That Codex binary cannot complete Linux/WSL auth here."
-      hint "Rover will install or prefer a Linux Codex CLI for this environment."
+      hint "Menisik will install or prefer a Linux Codex CLI for this environment."
     else
       warn "Found Codex CLI at $existing_cmd but it is not usable in this Linux environment."
-      hint "Rover will reinstall Codex CLI for Linux/WSL."
+      hint "Menisik will reinstall Codex CLI for Linux/WSL."
     fi
   fi
   if ! confirm "Install Codex CLI now?"; then
@@ -491,7 +494,7 @@ install_codex_if_requested() {
   if has_cmd npm; then
     if ! ensure_user_npm_global; then
       warn "Could not switch npm global installs to a user-writable prefix"
-      hint "Run 'export npm_config_prefix=~/.local/npm' and add ~/.local/npm/bin to PATH, then rerun rover setup."
+      hint "Run 'export npm_config_prefix=~/.local/npm' and add ~/.local/npm/bin to PATH, then rerun menisik setup."
       return 0
     fi
     log "installing Codex CLI via npm"
@@ -504,7 +507,7 @@ install_codex_if_requested() {
       ok "Codex CLI ready at $installed_cmd"
     else
       warn "Codex CLI install finished, but no Linux/WSL codex binary was found"
-      hint "Check npm global bin and PATH, then rerun rover setup."
+      hint "Check npm global bin and PATH, then rerun menisik setup."
     fi
   else
     warn "npm not available; cannot install Codex CLI automatically"
@@ -513,7 +516,7 @@ install_codex_if_requested() {
 
 configure_github_auth() {
   local auth_choice
-  auth_choice="$(choose_option "Select GitHub auth mode for Rover:" \
+  auth_choice="$(choose_option "Select GitHub auth mode for Menisik:" \
     "Token in .env only" \
     "gh auth login only" \
     "Both token + gh auth login" \
@@ -624,7 +627,7 @@ configure_codex_backend() {
         fi
       else
         warn "No usable Linux/WSL Codex CLI was found, so device auth was skipped"
-        hint "If command -v codex points into /mnt/c, install Codex inside Linux or rerun setup to let Rover do it."
+        hint "If command -v codex points into /mnt/c, install Codex inside Linux or rerun setup to let Menisik do it."
       fi
       ;;
     "Run browser-based codex login")
@@ -650,7 +653,7 @@ configure_codex_backend() {
         fi
       else
         warn "No usable Linux/WSL Codex CLI was found, so browser login was skipped"
-        hint "If command -v codex points into /mnt/c, install Codex inside Linux or rerun setup to let Rover do it."
+        hint "If command -v codex points into /mnt/c, install Codex inside Linux or rerun setup to let Menisik do it."
       fi
       ;;
     "Skip Codex auth for now")
@@ -696,7 +699,7 @@ configure_claude_backend() {
     "Browser login (claude.ai account — no API key needed)")
       ok "Claude CLI installed. Login step:"
       todo "Run 'claude' in a new terminal to complete browser login"
-      todo "After login, run 'rover doctor' to verify"
+      todo "After login, run 'menisik doctor' to verify"
       ;;
     "Save ANTHROPIC_API_KEY to .env")
       prompt_env_value "ANTHROPIC_API_KEY" "Enter ANTHROPIC_API_KEY (input hidden):" true
@@ -737,33 +740,39 @@ configure_api_key_backend() {
 }
 
 install_openclaw_integration() {
-  if ! confirm "Install Rover OpenClaw skill, wrapper, and mcp.servers.rover now?"; then
+  if ! confirm "Install Menisik OpenClaw skill, wrapper, and mcp.servers.menisik now?"; then
     warn "Skipping OpenClaw native integration"
     return 0
   fi
 
   local python_bin
-  local rover_bin
-  local rover_mcp_bin
+  local menisik_bin
+  local menisik_mcp_bin
   python_bin="$(venv_python_bin)"
-  rover_bin="$(venv_bin_dir)/rover"
-  rover_mcp_bin="$(venv_bin_dir)/rover-mcp"
+  menisik_bin="$(venv_bin_dir)/menisik"
+  menisik_mcp_bin="$(venv_bin_dir)/menisik-mcp"
+  if [ ! -x "$menisik_bin" ] && [ -x "$(venv_bin_dir)/rover" ]; then
+    menisik_bin="$(venv_bin_dir)/rover"
+  fi
+  if [ ! -x "$menisik_mcp_bin" ] && [ -x "$(venv_bin_dir)/rover-mcp" ]; then
+    menisik_mcp_bin="$(venv_bin_dir)/rover-mcp"
+  fi
 
   if [ ! -x "$python_bin" ]; then
     warn "Python interpreter not found for OpenClaw asset install: $python_bin"
     return 0
   fi
-  if [ ! -x "$rover_bin" ] || [ ! -x "$rover_mcp_bin" ]; then
-    warn "rover / rover-mcp executable not found for OpenClaw asset install"
+  if [ ! -x "$menisik_bin" ] || [ ! -x "$menisik_mcp_bin" ]; then
+    warn "menisik / menisik-mcp executable not found for OpenClaw asset install"
     return 0
   fi
 
-  log "installing Rover OpenClaw skill, wrapper, and MCP config"
+  log "installing Menisik OpenClaw skill, wrapper, and MCP config"
   "$python_bin" "$ROOT_DIR/src/platform/openclaw_install.py" \
-    --rover-bin "$rover_bin" \
+    --menisik-bin "$menisik_bin" \
     --python-bin "$python_bin" \
-    --rover-mcp-bin "$rover_mcp_bin"
-  ok "OpenClaw Rover integration installed"
+    --menisik-mcp-bin "$menisik_mcp_bin"
+  ok "OpenClaw Menisik integration installed"
 }
 
 main() {
@@ -795,7 +804,7 @@ main() {
   log "upgrading pip"
   python -m pip install -U pip
 
-  log "installing rover package in editable mode"
+  log "installing menisik package in editable mode"
   python -m pip install -e "$ROOT_DIR"
 
   section "Project configuration"
@@ -827,8 +836,8 @@ main() {
   install_openclaw_integration
 
   section "Readiness check"
-  log "running rover doctor"
-  rover doctor 2>/dev/null || rover-engine --doctor 2>/dev/null || true
+  log "running menisik doctor"
+  menisik doctor 2>/dev/null || rover doctor 2>/dev/null || true
 
   printf '\n'
   ok "setup complete"
@@ -840,8 +849,8 @@ main() {
   if ! has_cmd codex && ! has_cmd claude; then
     todo "Install Codex CLI or Claude CLI before running contributions."
   fi
-  todo "Run: rover doctor"
-  todo "Run: rover run       # submit your first PR"
+  todo "Run: menisik doctor"
+  todo "Run: menisik run     # submit your first PR"
 }
 
 main "$@"

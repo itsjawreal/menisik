@@ -8,7 +8,7 @@ $EnvFile = Join-Path $RootDir '.env'
 $ExampleEnvFile = Join-Path $RootDir '.env.example'
 $McpFile = Join-Path $RootDir '.mcp.json'
 
-function Write-Info($Message) { Write-Host "[rover] $Message" -ForegroundColor Cyan }
+function Write-Info($Message) { Write-Host "[menisik] $Message" -ForegroundColor Cyan }
 function Write-Ok($Message) { Write-Host "[ok] $Message" -ForegroundColor Green }
 function Write-Warn($Message) { Write-Host "[warn] $Message" -ForegroundColor Yellow }
 function Write-Todo($Message) { Write-Host "  - $Message" }
@@ -155,14 +155,14 @@ function Get-VenvPython {
     return Join-Path $VenvDir 'Scripts\python.exe'
 }
 
-function Install-Rover {
+function Install-Menisik {
     $venvPython = Get-VenvPython
     & $venvPython -m pip install -U pip
     & $venvPython -m pip install -e $RootDir
 }
 
 function Configure-GitHubAuth {
-    $authChoice = Choose-Option -Prompt 'Select GitHub auth mode for Rover:' -Options @(
+    $authChoice = Choose-Option -Prompt 'Select GitHub auth mode for Menisik:' -Options @(
         'Token in .env only',
         'gh auth login only',
         'Both token + gh auth login',
@@ -258,27 +258,31 @@ function Configure-ApiKeyBackend {
 }
 
 function Install-OpenClawIntegration {
-    if (-not (Confirm 'Install Rover OpenClaw skill, wrapper, and mcp.servers.rover now?')) {
+    if (-not (Confirm 'Install Menisik OpenClaw skill, wrapper, and mcp.servers.menisik now?')) {
         return
     }
     $venvPython = Get-VenvPython
-    $roverBin = Join-Path $VenvDir 'Scripts\rover.exe'
-    if (-not (Test-Path $roverBin)) { $roverBin = Join-Path $VenvDir 'Scripts\rover' }
-    $roverMcpBin = Join-Path $VenvDir 'Scripts\rover-mcp.exe'
-    if (-not (Test-Path $roverMcpBin)) { $roverMcpBin = Join-Path $VenvDir 'Scripts\rover-mcp' }
+    $menisikBin = Join-Path $VenvDir 'Scripts\menisik.exe'
+    if (-not (Test-Path $menisikBin)) { $menisikBin = Join-Path $VenvDir 'Scripts\menisik' }
+    if (-not (Test-Path $menisikBin)) { $menisikBin = Join-Path $VenvDir 'Scripts\rover.exe' }
+    if (-not (Test-Path $menisikBin)) { $menisikBin = Join-Path $VenvDir 'Scripts\rover' }
+    $menisikMcpBin = Join-Path $VenvDir 'Scripts\menisik-mcp.exe'
+    if (-not (Test-Path $menisikMcpBin)) { $menisikMcpBin = Join-Path $VenvDir 'Scripts\menisik-mcp' }
+    if (-not (Test-Path $menisikMcpBin)) { $menisikMcpBin = Join-Path $VenvDir 'Scripts\rover-mcp.exe' }
+    if (-not (Test-Path $menisikMcpBin)) { $menisikMcpBin = Join-Path $VenvDir 'Scripts\rover-mcp' }
     & $venvPython (Join-Path $RootDir 'src\platform\openclaw_install.py') `
-        --rover-bin $roverBin `
+        --menisik-bin $menisikBin `
         --python-bin $venvPython `
-        --rover-mcp-bin $roverMcpBin
+        --menisik-mcp-bin $menisikMcpBin
 }
 
 Clear-Host
-Write-Host "rover windows installer`n" -ForegroundColor Cyan
-Write-Warn 'This setup prepares a local Windows Rover environment with the same guided choices as the VPS installer.'
+Write-Host "menisik windows installer`n" -ForegroundColor Cyan
+Write-Warn 'This setup prepares a local Windows Menisik environment with the same guided choices as the VPS installer.'
 
 Ensure-EnvFile
 Ensure-Venv
-Install-Rover
+Install-Menisik
 
 Write-Host "`nGitHub authentication" -ForegroundColor Cyan
 Configure-GitHubAuth
@@ -310,11 +314,11 @@ $venvPython = Get-VenvPython
 & $venvPython -m app.builder --doctor
 
 Write-Host ""
-Write-Ok 'Windows Rover setup complete'
+Write-Ok 'Windows Menisik setup complete'
 Write-Host 'Next steps' -ForegroundColor Cyan
 Write-Todo "Activate venv: $VenvDir\\Scripts\\Activate.ps1"
 if (-not $env:GH_TOKEN -and -not $env:GITHUB_TOKEN) {
     Write-Todo 'Set GH_TOKEN/GITHUB_TOKEN or run gh auth login'
 }
-Write-Todo 'Run: rover doctor'
-Write-Todo 'Run: rover run'
+Write-Todo 'Run: menisik doctor'
+Write-Todo 'Run: menisik run'

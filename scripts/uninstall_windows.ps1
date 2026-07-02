@@ -13,7 +13,7 @@ $StreamDir = Join-Path $RootDir '.stream_partials'
 $OpenClawHome = if ($env:OPENCLAW_HOME) { $env:OPENCLAW_HOME } else { Join-Path $HOME '.openclaw' }
 $AltOpenClawHome = Join-Path $HOME 'openclaw'
 
-function Write-Info($Message) { Write-Host "[rover] $Message" -ForegroundColor Cyan }
+function Write-Info($Message) { Write-Host "[menisik] $Message" -ForegroundColor Cyan }
 function Write-Ok($Message) { Write-Host "[ok] $Message" -ForegroundColor Green }
 function Write-Warn($Message) { Write-Host "[warn] $Message" -ForegroundColor Yellow }
 function Write-Todo($Message) { Write-Host "  - $Message" }
@@ -64,29 +64,32 @@ function Remove-Target {
     if (Test-Path $Target) {
         Remove-Item -LiteralPath $Target -Recurse -Force
         $script:ChangesMade = $true
-        Write-Ok "removed $Label: $Target"
+        Write-Ok "removed ${Label}: $Target"
     } else {
-        Write-Info "skip missing $Label: $Target"
+        Write-Info "skip missing ${Label}: $Target"
     }
 }
 
 function Remove-OpenClawAssets {
     foreach ($root in @($OpenClawHome, $AltOpenClawHome)) {
-        Remove-Target -Target (Join-Path $root 'workspace\skills\rover') -Label 'OpenClaw Rover workspace skill'
-        Remove-Target -Target (Join-Path $root 'skills\rover') -Label 'OpenClaw Rover fallback skill'
+        Remove-Target -Target (Join-Path $root 'workspace\skills\menisik') -Label 'OpenClaw Menisik workspace skill'
+        Remove-Target -Target (Join-Path $root 'skills\menisik') -Label 'OpenClaw Menisik fallback skill'
+        Remove-Target -Target (Join-Path $root 'workspace\skills\rover') -Label 'OpenClaw legacy Rover workspace skill'
+        Remove-Target -Target (Join-Path $root 'skills\rover') -Label 'OpenClaw legacy Rover fallback skill'
         Remove-Target -Target (Join-Path $root 'workspace\skills\github-contribution-engine') -Label 'OpenClaw workspace skill'
         Remove-Target -Target (Join-Path $root 'skills\github-contribution-engine') -Label 'OpenClaw fallback skill'
-        Remove-Target -Target (Join-Path $root 'tools\rover.py') -Label 'OpenClaw Rover wrapper'
+        Remove-Target -Target (Join-Path $root 'tools\menisik.py') -Label 'OpenClaw Menisik wrapper'
+        Remove-Target -Target (Join-Path $root 'tools\rover.py') -Label 'OpenClaw legacy Rover wrapper'
         Remove-Target -Target (Join-Path $root 'tools\contribution.py') -Label 'OpenClaw wrapper'
     }
 }
 
 Clear-Host
-Write-Host "rover windows uninstall/reset`n" -ForegroundColor Cyan
-Write-Warn 'This script removes Rover-local Windows artifacts so you can re-test setup from a clean slate.'
-Write-Warn 'Review each prompt carefully. Choosing Yes will permanently delete the selected local Rover files or directories.'
+Write-Host "menisik windows uninstall/reset`n" -ForegroundColor Cyan
+Write-Warn 'This script removes Menisik-local Windows artifacts so you can re-test setup from a clean slate.'
+Write-Warn 'Review each prompt carefully. Choosing Yes will permanently delete the selected local Menisik files or directories.'
 
-if ((Choose-Option -Prompt "Warning: this reset flow can permanently delete selected local Rover files, directories, and integration artifacts.`n`nChoose how to proceed:" -Options @(
+if ((Choose-Option -Prompt "Warning: this reset flow can permanently delete selected local Menisik files, directories, and integration artifacts.`n`nChoose how to proceed:" -Options @(
     'Continue uninstall/reset',
     'Cancel and keep everything'
 )) -ne 'Continue uninstall/reset') {
@@ -98,7 +101,7 @@ if (Confirm "Remove Python virtualenv at $VenvDir?") {
     Remove-Target -Target $VenvDir -Label 'virtualenv'
 }
 
-if (Confirm 'Remove Rover runtime state (data, logs, runs, stream partials)?') {
+if (Confirm 'Remove Menisik runtime state (data, logs, runs, stream partials)?') {
     Remove-Target -Target $DataDir -Label 'data dir'
     Remove-Target -Target $LogDir -Label 'logs dir'
     Remove-Target -Target $RunsDir -Label 'runs dir'
@@ -109,7 +112,7 @@ if (Confirm "Remove local MCP config at $McpFile?") {
     Remove-Target -Target $McpFile -Label '.mcp.json'
 }
 
-if (Confirm 'Remove OpenClaw skill and wrapper installed by Rover?') {
+if (Confirm 'Remove OpenClaw skill and wrapper installed by Menisik?') {
     Remove-OpenClawAssets
 }
 
@@ -119,11 +122,11 @@ if (Confirm 'Remove local .env so setup can start from zero?') {
 
 Write-Host ""
 if ($ChangesMade) {
-    Write-Ok 'Windows Rover uninstall/reset complete'
+    Write-Ok 'Windows Menisik uninstall/reset complete'
     Write-Host 'Next steps' -ForegroundColor Cyan
     Write-Todo 'Optional: run gh auth logout -h github.com if you also want to reset GitHub CLI auth'
     Write-Todo 'Optional: run codex logout or claude logout if you want to re-test backend login flows'
     Write-Todo 'Reinstall with: powershell -ExecutionPolicy Bypass -File scripts/install_windows.ps1'
 } else {
-    Write-Warn 'No changes were made. Rover uninstall/reset was skipped.'
+    Write-Warn 'No changes were made. Menisik uninstall/reset was skipped.'
 }

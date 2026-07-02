@@ -1,4 +1,4 @@
-# Install a Windows Task Scheduler task that starts rover-daemon natively
+# Install a Windows Task Scheduler task that starts menisik-daemon natively
 # at Windows login using the Windows Python installation.
 # Run this from PowerShell (no admin required).
 #
@@ -13,13 +13,15 @@ param(
     [string]$PythonExe = ""   # override Python path if needed
 )
 
-$TaskName   = "RoverDaemon"
-$ProjectDir = "\\wsl.localhost\Ubuntu-20.04\home\nadira\project\rover"
+$TaskName       = "MenisikDaemon"
+$LegacyTaskName = "RoverDaemon"
+$ProjectDir = "\\wsl.localhost\Ubuntu-20.04\home\nadira\project\menisik"
 
 # ── Uninstall ────────────────────────────────────────────────
 if ($Uninstall) {
     Write-Host "Removing Task Scheduler task '$TaskName'..."
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+    Unregister-ScheduledTask -TaskName $LegacyTaskName -Confirm:$false -ErrorAction SilentlyContinue
     Write-Host "Done." -ForegroundColor Green
     exit 0
 }
@@ -63,7 +65,7 @@ if (-not (Test-Path $ProjectDir)) {
 }
 
 # ── Check dependencies in Windows Python ────────────────────
-Write-Host "Checking rover dependencies in Windows Python..." -ForegroundColor Cyan
+Write-Host "Checking menisik dependencies in Windows Python..." -ForegroundColor Cyan
 $checkCmd = "import importlib.util; missing=[p for p in ['dotenv','httpx'] if importlib.util.find_spec(p) is None]; print(','.join(missing))"
 $missing = & $PythonExe -c $checkCmd 2>$null
 if ($missing) {
@@ -89,6 +91,13 @@ $settings = New-ScheduledTaskSettingsSet `
     -StartWhenAvailable
 
 # ── Register ─────────────────────────────────────────────────
+# Drop the pre-rename task so the daemon is not registered twice.
+$legacy = Get-ScheduledTask -TaskName $LegacyTaskName -ErrorAction SilentlyContinue
+if ($legacy) {
+    Write-Host "Removing legacy task '$LegacyTaskName'..." -ForegroundColor Yellow
+    Unregister-ScheduledTask -TaskName $LegacyTaskName -Confirm:$false
+}
+
 $existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 if ($existing) {
     Write-Host "Task '$TaskName' already exists — updating..." -ForegroundColor Yellow
@@ -101,14 +110,14 @@ Register-ScheduledTask `
     -Trigger     $trigger `
     -Settings    $settings `
     -RunLevel    Limited `
-    -Description "Run rover-daemon (PR monitor + Telegram bot) natively on Windows at login." `
+    -Description "Run menisik-daemon (PR monitor + Telegram bot) natively on Windows at login." `
     | Out-Null
 
 Write-Host ""
 Write-Host "Task '$TaskName' registered." -ForegroundColor Green
-Write-Host "rover-daemon will start natively (Windows Python) at every Windows login."
+Write-Host "menisik-daemon will start natively (Windows Python) at every Windows login."
 Write-Host ""
-Write-Host "To install rover packages into Windows Python (one time):"
+Write-Host "To install menisik packages into Windows Python (one time):"
 Write-Host "  & '$PythonExe' -m pip install -e '$ProjectDir'"
 Write-Host ""
 Write-Host "To run it now without restarting:"
@@ -118,7 +127,7 @@ Write-Host "To check if it is running:"
 Write-Host "  Get-Process pythonw -ErrorAction SilentlyContinue"
 Write-Host ""
 Write-Host "Logs are written to:"
-Write-Host "  $ProjectDir\logs\rover-daemon.log"
+Write-Host "  $ProjectDir\logs\menisik-daemon.log"
 Write-Host ""
 Write-Host "To remove this task:"
 Write-Host "  .\scripts\install_autostart_windows.ps1 -Uninstall"
