@@ -200,16 +200,12 @@ def _detect_backend_runtime_issue(stderr_text: str, stdout_text: str) -> Runtime
     return None
 
 
-def _extract_first_json_object(text: str) -> str | None:
-    """Return the first balanced top-level {...} object, ignoring surrounding prose.
+def _balanced_json_object_at(text: str, start: int) -> str | None:
+    """Return the balanced {...} object starting at `start`, or None.
 
     Brace-aware and string-aware so nested objects and braces inside string
-    literals do not break the match. Reasoning models (and OpenRouter responses)
-    often wrap the JSON in explanation text; this recovers it.
+    literals do not break the match.
     """
-    start = text.find("{")
-    if start == -1:
-        return None
     depth = 0
     in_str = False
     escape = False
@@ -234,20 +230,51 @@ def _extract_first_json_object(text: str) -> str | None:
     return None
 
 
+def _recover_json_object(text: str) -> dict | None:
+    """Recover the first parseable JSON object embedded in prose.
+
+    Reasoning models (and agentic CLI backends) often surround the JSON with
+    explanation text or code fences containing stray braces, so try every
+    balanced {...} candidate until one parses as a dict.
+    """
+    pos = 0
+    while True:
+        start = text.find("{", pos)
+        if start == -1:
+            return None
+        candidate = _balanced_json_object_at(text, start)
+        if candidate is None:
+            return None
+        try:
+            parsed = json.loads(candidate)
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+        # Stray braces (e.g. inside a code fence) — keep scanning past them.
+        pos = start + 1
+
+
 def _parse_json(raw: str) -> dict:
     text = raw.strip()
     fenced = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL)
     if fenced:
-        text = fenced.group(1).strip()
+        fenced_text = fenced.group(1).strip()
+        try:
+            return json.loads(fenced_text)
+        except json.JSONDecodeError:
+            pass
+        recovered = _recover_json_object(fenced_text)
+        if recovered is not None:
+            return recovered
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        pass
-    # Reasoning models may prepend/append prose around the JSON — recover the object.
-    obj = _extract_first_json_object(text)
-    if obj is not None:
-        return json.loads(obj)
-    return json.loads(text)  # re-raise the original decode error
+        # Prose may surround the JSON (before, after, or between code fences).
+        recovered = _recover_json_object(text)
+        if recovered is not None:
+            return recovered
+        raise
 
 
 def _strip_fences(text: str) -> str:

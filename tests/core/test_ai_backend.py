@@ -281,6 +281,34 @@ class ParseJsonRobustnessTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ai._parse_json("no json here at all")
 
+    def test_json_verdict_after_prose_with_code_fence(self) -> None:
+        # Regression: agentic CLI backends explain their analysis first (with a
+        # python code fence containing stray braces) and put the JSON verdict at
+        # the end. The fence heuristic hijacked parsing and the verdict was lost.
+        raw = (
+            "I verified the flagged handler:\n\n"
+            "```python\n"
+            "except Exception as e:\n"
+            "    logger.error(f\"Error appending event: {e}\")\n"
+            "```\n\n"
+            "The handler already logs, so the evidence does not hold up.\n\n"
+            '{"decision": "reject", "reason": "handler already logs the error"}'
+        )
+        self.assertEqual(
+            ai._parse_json(raw),
+            {"decision": "reject", "reason": "handler already logs the error"},
+        )
+
+    def test_stray_braces_in_fence_do_not_shadow_later_json(self) -> None:
+        raw = (
+            "Analysis:\n"
+            "```\n"
+            "def f(x): return {x}\n"
+            "```\n"
+            'Verdict: {"ok": true, "n": 3}'
+        )
+        self.assertEqual(ai._parse_json(raw), {"ok": True, "n": 3})
+
 
 if __name__ == "__main__":
     unittest.main()
