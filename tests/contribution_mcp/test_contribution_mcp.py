@@ -375,9 +375,9 @@ class ContributionMCPToolsTests(unittest.TestCase):
         ):
             _run_notification_loop(run)
 
-        self.assertTrue(any("ROVER PROGRESS" in message for message in sent_cards))
-        self.assertTrue(any("ROVER PROGRESS" in message for message in edited_cards))
-        self.assertTrue(any("ROVER NO SUBMISSION" in message for message in edited_cards))
+        self.assertTrue(any("MENISIK PROGRESS" in message for message in sent_cards))
+        self.assertTrue(any("MENISIK PROGRESS" in message for message in edited_cards))
+        self.assertTrue(any("MENISIK NO SUBMISSION" in message for message in edited_cards))
         self.assertTrue(any("🕒 Last update at :" in message for message in sent_cards))
         self.assertTrue(any("🕒 Last update at :" in message for message in edited_cards))
         self.assertTrue(any("🚦 Mode     : live" in message for message in edited_cards))
@@ -428,7 +428,7 @@ class ContributionMCPToolsTests(unittest.TestCase):
 
         rendered = _render_terminal_summary(run)
 
-        self.assertIn("ROVER NO NARROW CANDIDATE", rendered)
+        self.assertIn("MENISIK NO NARROW CANDIDATE", rendered)
         self.assertIn("🎯 Top narrowed candidate: src/a.py", rendered)
         self.assertIn("Shortlist", rendered)
         self.assertIn("src/a.py | unchecked_response_shape | score=68", rendered)
@@ -542,8 +542,8 @@ class ContributionMCPToolsTests(unittest.TestCase):
     def test_cancel_run_emits_canceled_event_not_failed(self) -> None:
         # Regression: cancel_run previously appended event type "failed" for a
         # canceled run. Since "failed" is in MENISIK_NOTIFY_ON_EVENT_TYPES but
-        # "canceled" is not, this caused a spurious ROVER FAILED notification to
-        # fire before the correct ROVER CANCELED terminal notification.
+        # "canceled" is not, this caused a spurious MENISIK FAILED notification to
+        # fire before the correct MENISIK CANCELED terminal notification.
         from src.contribution_mcp.server import ManagedRun, _RUNS, _RUNS_LOCK, cancel_run
         import subprocess
 

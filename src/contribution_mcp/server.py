@@ -434,7 +434,7 @@ def _render_progress_card(run: ManagedRun) -> str:
     candidate_label = target_file or pattern_type or "-"
     updated_at = _format_update_timestamp(str(last_event.get("created_at") or "") if last_event else run.started_at)
     lines = [
-        "ROVER PROGRESS",
+        "MENISIK PROGRESS",
         _render_progress_bar(percent),
         "",
         f"🕒 Last update at : {updated_at}",
@@ -458,19 +458,19 @@ def _render_terminal_summary(run: ManagedRun) -> str:
     payload = _canonical_run_result(run)
     summary = dict(payload.get("summary") or {})
     status_title = {
-        "completed": "ROVER COMPLETE",
-        "failed": "ROVER FAILED",
-        "canceled": "ROVER CANCELED",
-    }.get(run.state, f"ROVER {run.state.upper()}")
+        "completed": "MENISIK COMPLETE",
+        "failed": "MENISIK FAILED",
+        "canceled": "MENISIK CANCELED",
+    }.get(run.state, f"MENISIK {run.state.upper()}")
     outcome_title = {
-        "submitted_new_pr": "ROVER PR SUBMITTED",
-        "existing_pr_already_open": "ROVER SKIPPED (OPEN PR)",
-        "dry_run_complete": "ROVER DRY RUN COMPLETE",
-        "completed_no_submission": "ROVER NO SUBMISSION",
-        "shortlist_below_patchability_threshold": "ROVER NO NARROW CANDIDATE",
-        "no_narrow_candidate": "ROVER NO NARROW CANDIDATE",
-        "submission_failed": "ROVER FAILED",
-        "canceled": "ROVER CANCELED",
+        "submitted_new_pr": "MENISIK PR SUBMITTED",
+        "existing_pr_already_open": "MENISIK SKIPPED (OPEN PR)",
+        "dry_run_complete": "MENISIK DRY RUN COMPLETE",
+        "completed_no_submission": "MENISIK NO SUBMISSION",
+        "shortlist_below_patchability_threshold": "MENISIK NO NARROW CANDIDATE",
+        "no_narrow_candidate": "MENISIK NO NARROW CANDIDATE",
+        "submission_failed": "MENISIK FAILED",
+        "canceled": "MENISIK CANCELED",
     }.get(payload["outcome_code"], status_title)
     updated_at = _format_update_timestamp(run.finished_at or (run.events[-1]["created_at"] if run.events else run.started_at))
     phase_label = "Patching" if str(summary.get("current_stage") or "").lower() in {"generate", "review", "submit"} else "Narrowing"
@@ -584,7 +584,7 @@ def _send_terminal_notification(run: ManagedRun) -> None:
 def _render_event_message(run: ManagedRun, event: dict[str, Any]) -> str:
     payload = _canonical_run_result(run)
     lines = [
-        f"ROVER {str(event.get('type') or 'update').upper()}",
+        f"MENISIK {str(event.get('type') or 'update').upper()}",
         f"Run: {run.run_id}",
         f"Repo: {_current_repo_label(run)}",
         f"State: {run.state}",
@@ -698,7 +698,7 @@ def _maybe_notify_stall(run: ManagedRun) -> None:
         return
     message = "\n".join(
         [
-            "ROVER STALLED",
+            "MENISIK STALLED",
             f"Run: {run.run_id}",
             f"Repo: {_current_repo_label(run)}",
             f"State: {run.state}",
@@ -855,9 +855,9 @@ def _find_run(run_id: str = "") -> ManagedRun | None:
 
 
 mcp = FastMCP(
-    name="rover",
+    name="menisik",
     instructions=(
-        "Rover contribution engine. "
+        "Menisik contribution engine. "
         "Tools: get_status, list_opportunities, list_prs, contrib_report, doctor, inspect_repo, "
         "route_command, start_run, run_contribution, contrib_once, contrib_targeted, cancel_run, "
         "stop_contribution, get_run_status, get_run_events, get_run_result, get_logs, get_config, update_config."
@@ -937,7 +937,7 @@ def inspect_repo(repo: str) -> dict[str, Any]:
 
 @mcp.tool()
 def route_command(text: str) -> dict[str, Any]:
-    """Map natural-language text to a canonical Rover action for chat-style agent shells."""
+    """Map natural-language text to a canonical Menisik action for chat-style agent shells."""
     request = parse_command_text(text)
     return {
         "action": request.action,

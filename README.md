@@ -78,7 +78,11 @@ Current policy:
 Compatibility layers that remain supported without a removal date yet:
 
 - OpenClaw compatibility skill paths under `github-contribution-engine` as aliases only.
-- The MCP server still registers as `rover` and installers still write `rover`-named integration paths (`mcp.servers.rover`, skill/wrapper paths); renaming those would break existing MCP client configs, so they migrate to `menisik` at `0.2.0`.
+
+Completed migrations:
+
+- The MCP server now registers as `menisik` (was `rover`). **Existing MCP client configs must rename their server key** (e.g. `mcpServers.rover` → `mcpServers.menisik` in Claude Desktop/Claude Code configs, `mcp.servers.rover` → `mcp.servers.menisik` in OpenClaw). The tool set is unchanged.
+- Installers now write `menisik`-named integration paths (skills, wrappers, MCP entries) and clean up the old `rover` entries; `doctor` still recognizes leftover `rover` paths as legacy-ok.
 
 These layers stay because they still protect real integrations, not just old command muscle memory.
 
