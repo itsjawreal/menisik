@@ -66,13 +66,22 @@ def _discover_root() -> Path:
 # ── Environment ──────────────────────────────────────────────
 ROOT = _discover_root()
 ENV_FILE = ROOT / ".env"
+
+
+def _unquote_env_value(value: str) -> str:
+    # dotenv-style values may be wrapped in matching quotes: KEY="a b" / KEY='a b'
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        return value[1:-1]
+    return value
+
+
 if ENV_FILE.exists():
     for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip())
+        os.environ.setdefault(key.strip(), _unquote_env_value(value.strip()))
 
 if github_token := os.getenv("GITHUB_TOKEN", "").strip():
     os.environ.setdefault("GH_TOKEN", github_token)
