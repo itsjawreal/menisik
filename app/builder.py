@@ -176,9 +176,9 @@ def build_parser() -> argparse.ArgumentParser:
               PR_MAX_PUSHED_DAYS    Skip repos inactive longer than N days (default: 45)
 
             ── DEPRECATION POLICY ───────────────────────────────────────────
-              rover, rover-engine, --pr, --pr-check, and --pr-respond are deprecated.
-              Warning period: 0.1.x
-              Planned removal: 0.2.0 or next intentionally breaking CLI release.
+              The rover* entry points were removed in 0.2.0 (deprecated through 0.1.x).
+              --pr, --pr-check, and --pr-respond remain deprecated (warning-only);
+              they will be removed in the next intentionally breaking CLI release.
             """
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -187,7 +187,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--version", "-V",
         action="version",
         version=(
-            "menisik 0.1.2\n"
+            "menisik 0.2.0\n"
             f"root={Path(__file__).resolve().parents[1]}\n"
             f"python={sys.executable}"
         ),

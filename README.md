@@ -10,7 +10,7 @@ Menisik is a personal learning project exploring whether an AI engine can find a
 
 *Menisik* is Indonesian for darning: mending fabric with small, careful, near-invisible stitches. That is the philosophy of this engine — it does not redesign the garment, it finds a small hole and closes it neatly, one stitch (one narrow patch) at a time.
 
-This project was formerly named **rover**. The `rover`, `rover-engine`, `rover-mcp`, and `rover-daemon` commands remain as deprecated aliases through `0.1.x` (see [Deprecation Policy](#deprecation-policy)).
+This project was formerly named **rover**. The `rover`, `rover-engine`, `rover-mcp`, and `rover-daemon` command aliases were deprecated through `0.1.x` and removed in `0.2.0` (see [Deprecation Policy](#deprecation-policy)).
 
 ## What It Does
 
@@ -61,8 +61,8 @@ python -m app.builder --doctor
 
 Compatibility note:
 
-- `rover`, `rover-engine`, `rover-mcp`, and `rover-daemon` still exist as deprecated aliases from the pre-rename era
-- prefer `menisik ...` or `python -m app.builder ...` for new usage
+- the pre-rename `rover`, `rover-engine`, `rover-mcp`, and `rover-daemon` aliases were removed in `0.2.0`
+- use `menisik ...`, `menisik-engine`, `menisik-mcp`, `menisik-daemon`, or `python -m app.builder ...`
 
 ## Deprecation Policy
 
@@ -70,19 +70,20 @@ Compatibility layers are kept only when they still protect active operator workf
 
 Current policy:
 
-- The project was renamed from **rover** to **menisik**. `rover`, `rover-engine`, `rover-mcp`, and `rover-daemon` are deprecated aliases of the `menisik*` entry points.
-- `--pr`, `--pr-check`, and `--pr-respond` are deprecated now; prefer `--contrib`, `--contrib-check`, and `--contrib-respond`.
-- Warning-only period: all `0.1.x` releases.
-- Planned removal target: `0.2.0` or the next intentionally breaking CLI release.
+- The project was renamed from **rover** to **menisik**.
+- `--pr`, `--pr-check`, and `--pr-respond` are deprecated now; prefer `--contrib`, `--contrib-check`, and `--contrib-respond`. They stay warning-only until the next intentionally breaking CLI release.
+- The deprecated `ROVER_NOTIFY_*` env spellings (and `ROVER_HOME`/`ROVER_STATE_DIR`-style storage overrides) are still read as fallbacks with a one-time warning per run; rename them to `MENISIK_*`.
 
 Compatibility layers that remain supported without a removal date yet:
 
 - OpenClaw compatibility skill paths under `github-contribution-engine` as aliases only.
 
-Completed migrations:
+Completed migrations (0.2.0):
 
+- The `rover`, `rover-engine`, `rover-mcp`, and `rover-daemon` entry-point aliases were removed per the planned `0.2.0` target. Update any scripts or MCP client commands still invoking those binaries.
 - The MCP server now registers as `menisik` (was `rover`). **Existing MCP client configs must rename their server key** (e.g. `mcpServers.rover` → `mcpServers.menisik` in Claude Desktop/Claude Code configs, `mcp.servers.rover` → `mcp.servers.menisik` in OpenClaw). The tool set is unchanged.
 - Installers now write `menisik`-named integration paths (skills, wrappers, MCP entries) and clean up the old `rover` entries; `doctor` still recognizes leftover `rover` paths as legacy-ok.
+- Local storage moved from `~/.rover`-style dirs to `~/.menisik` equivalents, with automatic migration at startup (falls back to reading the old location with a warning if the move fails).
 
 These layers stay because they still protect real integrations, not just old command muscle memory.
 
@@ -426,7 +427,7 @@ python -m src.contribution_mcp
 python -m app.builder --install-openclaw
 ```
 
-**Hermes and similar agent shells** — point them at the same `menisik-mcp` stdio server (or the deprecated `rover-mcp` alias) and start from `route_command` for natural-language chat requests. Operator notes live in [docs/agents/hermes.md](docs/agents/hermes.md).
+**Hermes and similar agent shells** — point them at the same `menisik-mcp` stdio server and start from `route_command` for natural-language chat requests. Operator notes live in [docs/agents/hermes.md](docs/agents/hermes.md).
 
 Installable path:
 

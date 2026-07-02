@@ -12,11 +12,19 @@ class PackagingTests(unittest.TestCase):
 
         self.assertIn('name = "menisik"', text)
         self.assertIn('menisik = "app.contribute:main"', text)
+        self.assertIn('menisik-engine = "app.builder:main"', text)
         self.assertIn('menisik-mcp = "src.contribution_mcp.server:main"', text)
+        self.assertIn('menisik-daemon = "src.daemon.runner:main"', text)
 
-    def test_pyproject_keeps_deprecated_rover_aliases_through_0_1_x(self) -> None:
+    def test_pyproject_removed_rover_aliases_at_0_2_0(self) -> None:
         text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
-        self.assertIn('rover = "app.contribute:main"', text)
-        self.assertIn('rover-engine = "app.builder:main"', text)
-        self.assertIn('rover-mcp = "src.contribution_mcp.server:main"', text)
+        self.assertIn('version = "0.2.0"', text)
+        self.assertNotIn('rover = "app.contribute:main"', text)
+        self.assertNotIn('rover-engine = "app.builder:main"', text)
+        self.assertNotIn('rover-mcp = "src.contribution_mcp.server:main"', text)
+        self.assertNotIn('rover-daemon = "src.daemon.runner:main"', text)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,6 +1,6 @@
 [project]
 name = "menisik"
-version = "0.1.2"
+version = "0.2.0"
 description = "Learning project: a GitHub contribution engine that drafts narrow patches through quality gates and leaves the submit decision to a human."
 readme = "README.md"
 license = { text = "MIT" }
@@ -21,13 +21,11 @@ dependencies = [
 
 [project.scripts]
 menisik = "app.contribute:main"
+menisik-engine = "app.builder:main"
 menisik-mcp = "src.contribution_mcp.server:main"
 menisik-daemon = "src.daemon.runner:main"
-# Deprecated aliases (kept through 0.1.x per the deprecation policy):
-rover = "app.contribute:main"
-rover-engine = "app.builder:main"
-rover-mcp = "src.contribution_mcp.server:main"
-rover-daemon = "src.daemon.runner:main"
+# The deprecated rover/rover-engine/rover-mcp/rover-daemon aliases were removed
+# in 0.2.0 per the deprecation policy (warning-only through 0.1.x).
 
 [project.urls]
 Homepage = "https://github.com/itsjawreal/menisik"
