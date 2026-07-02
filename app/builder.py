@@ -369,13 +369,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--install-openclaw",
         action="store_true",
         help=(
-            "Install (or reinstall) the canonical Rover OpenClaw skill, wrapper, and mcp.servers.rover entry under ~/.openclaw."
+            "Install (or reinstall) the canonical Menisik OpenClaw skill, wrapper, and mcp.servers.menisik entry under ~/.openclaw."
         ),
     )
     integ.add_argument(
         "--install-hermes",
         action="store_true",
-        help="Install or update ~/.hermes/config.yaml with mcp_servers.rover.",
+        help="Install or update ~/.hermes/config.yaml with mcp_servers.menisik.",
     )
     integ.add_argument(
         "--install-mcp",
@@ -1721,21 +1721,25 @@ def main(argv: list[str] | None = None) -> None:
         import shutil as _shutil
         from pathlib import Path as _Path
 
-        rover_bin = (
-            _preferred_user_bin("rover")
+        menisik_bin = (
+            _preferred_user_bin("menisik")
+            or _shutil.which("menisik")
+            or _preferred_user_bin("rover")
             or _shutil.which("rover")
-            or str((_Path(sys.executable).resolve().parent / "rover"))
+            or str((_Path(sys.executable).resolve().parent / "menisik"))
         )
-        rover_mcp_bin = (
-            _preferred_user_bin("rover-mcp")
+        menisik_mcp_bin = (
+            _preferred_user_bin("menisik-mcp")
+            or _shutil.which("menisik-mcp")
+            or _preferred_user_bin("rover-mcp")
             or _shutil.which("rover-mcp")
-            or str((_Path(sys.executable).resolve().parent / "rover-mcp"))
+            or str((_Path(sys.executable).resolve().parent / "menisik-mcp"))
         )
         _python = _shutil.which("python3") or sys.executable
         skill_path, tool_path = install_openclaw_assets(
-            rover_bin=rover_bin,
+            menisik_bin=menisik_bin,
             python_bin=_python,
-            rover_mcp_bin=rover_mcp_bin,
+            menisik_mcp_bin=menisik_mcp_bin,
         )
         if args.json:
             _print_json_payload(
@@ -1751,8 +1755,12 @@ def main(argv: list[str] | None = None) -> None:
         import shutil as _shutil
         from pathlib import Path as _Path
 
-        rover_mcp_bin = _shutil.which("rover-mcp") or str((_Path(sys.executable).resolve().parent / "rover-mcp"))
-        config_path = install_hermes_config(rover_mcp_bin=rover_mcp_bin)
+        menisik_mcp_bin = (
+            _shutil.which("menisik-mcp")
+            or _shutil.which("rover-mcp")
+            or str((_Path(sys.executable).resolve().parent / "menisik-mcp"))
+        )
+        config_path = install_hermes_config(menisik_mcp_bin=menisik_mcp_bin)
         if args.json:
             _print_json_payload({"action": "install_hermes", "config_path": str(config_path)})
         else:

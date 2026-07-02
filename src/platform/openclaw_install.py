@@ -52,39 +52,40 @@ def _shared_skill_root(openclaw_root: str | None = None) -> Path:
 def _render_skill(name: str, invoke: str) -> str:
     return f"""---
 name: {name}
-description: Use the local Rover wrapper to inspect repos, read reports, and execute structured contribution workflows from OpenClaw.
+description: Use the local Menisik wrapper to inspect repos, read reports, and execute structured contribution workflows from OpenClaw.
 metadata: {{"openclaw": {{"requires": {{"bins": ["python3"]}}}}}}
 ---
 
 ## EXECUTION RULES
 
-- Prefer Rover MCP (`mcp.servers.rover`) for channel-driven automation and background work.
+- Prefer Menisik MCP (`mcp.servers.menisik`) for channel-driven automation and background work.
 - Use this native wrapper only when OpenClaw is operating as a chat assistant instead of an MCP client.
 - Execute the wrapper immediately for supported actions.
-- If the user message starts with `rover `, treat it as an explicit Rover command surface, not a general chat request.
-- For `rover ...` messages, call Rover first and answer from Rover output. Do not do exploratory reasoning, web-style investigation, or alternate tool selection before the Rover call.
-- After `/new`, still treat `rover ...` as a built-in command prefix because this skill remains installed outside chat memory.
+- If the user message starts with `menisik `, treat it as an explicit Menisik command surface, not a general chat request.
+- The legacy `rover ` prefix is a deprecated alias from the pre-rename era; treat `rover ...` messages exactly like the matching `menisik ...` command.
+- For `menisik ...` messages, call Menisik first and answer from Menisik output. Do not do exploratory reasoning, web-style investigation, or alternate tool selection before the Menisik call.
+- After `/new`, still treat `menisik ...` as a built-in command prefix because this skill remains installed outside chat memory.
 - Prefer machine-readable output; do not paraphrase success without the wrapper response.
-- Map exact Rover prefix commands directly:
-  - `rover profile` -> `profile`
-  - `rover doctor` -> `doctor`
-  - `rover scan security owner/repo` -> `scan --repo owner/repo --kind security`
-  - `rover scan bug owner/repo` -> `scan --repo owner/repo --kind bug`
-  - `rover scan trust owner/repo` -> `scan --repo owner/repo --kind trust`
-  - `rover scan audit owner/repo` -> `scan --repo owner/repo --kind audit`
-- For `rover profile`, return Rover profile output only. Never start, suggest, or summarize a contribution run from a profile request.
-- If the user message starts with `rover scan`, treat it as an exact scan command. Do not reinterpret it as inspect, report, contribution, issue triage, or PR review.
-- For `rover scan ...`, return Rover scan output only. Do not pivot into contribution recommendations, contribution-run suggestions, or "inspect already passed" summaries unless the user explicitly asks for next steps after the scan result.
-- For `rover scan ...`, never fall back to repo inspection, PR list fetching, or contribution workflow summaries just because the model is unsure. If routing is uncertain, call Rover and answer from its scan payload.
-- For `rover scan trust ...` and `rover scan audit ...`, do not claim that Python or TypeScript files are required. Trust and audit scans can still return repo-level trust signals for low-source or archive-heavy repos.
+- Map exact Menisik prefix commands directly:
+  - `menisik profile` -> `profile`
+  - `menisik doctor` -> `doctor`
+  - `menisik scan security owner/repo` -> `scan --repo owner/repo --kind security`
+  - `menisik scan bug owner/repo` -> `scan --repo owner/repo --kind bug`
+  - `menisik scan trust owner/repo` -> `scan --repo owner/repo --kind trust`
+  - `menisik scan audit owner/repo` -> `scan --repo owner/repo --kind audit`
+- For `menisik profile`, return Menisik profile output only. Never start, suggest, or summarize a contribution run from a profile request.
+- If the user message starts with `menisik scan`, treat it as an exact scan command. Do not reinterpret it as inspect, report, contribution, issue triage, or PR review.
+- For `menisik scan ...`, return Menisik scan output only. Do not pivot into contribution recommendations, contribution-run suggestions, or "inspect already passed" summaries unless the user explicitly asks for next steps after the scan result.
+- For `menisik scan ...`, never fall back to repo inspection, PR list fetching, or contribution workflow summaries just because the model is unsure. If routing is uncertain, call Menisik and answer from its scan payload.
+- For `menisik scan trust ...` and `menisik scan audit ...`, do not claim that Python or TypeScript files are required. Trust and audit scans can still return repo-level trust signals for low-source or archive-heavy repos.
 - Treat `run ...` contribution requests as live submission attempts unless the user explicitly asks for preview or dry-run.
 - Treat `preview ...`, `inspect ...`, and `check repo ... first` as non-live actions.
-- If a live Rover run is accepted, send one short acknowledgement with the `run_id` and stop there; do not continue with extra status chatter.
-- After a live Rover run starts, use only Rover status/result tools for follow-up. Do not improvise with `gh`, manual issue browsing, direct GitHub checks, or sandbox/tooling remediation unless the user explicitly asks for those.
-- Do not claim missing GitHub CLI, missing Python, MCP timeout, or similar environment problems if Rover already started a run or returned structured status.
-- Do not emit multiple assistant progress messages for the same run. Rover progress updates arrive through its own notification channel/card.
-- If Rover returns `accepted=false`, `status=blocked`, or `outcome_code=blocked_ineligible_repo`, treat that as the final answer.
-- For blocked runs, echo the Rover reason, `scope_notes`, and `next_steps` only. Do not offer monitoring, retries, scheduling, dependency cleanup, doctor workflows, or any background follow-up.
+- If a live Menisik run is accepted, send one short acknowledgement with the `run_id` and stop there; do not continue with extra status chatter.
+- After a live Menisik run starts, use only Menisik status/result tools for follow-up. Do not improvise with `gh`, manual issue browsing, direct GitHub checks, or sandbox/tooling remediation unless the user explicitly asks for those.
+- Do not claim missing GitHub CLI, missing Python, MCP timeout, or similar environment problems if Menisik already started a run or returned structured status.
+- Do not emit multiple assistant progress messages for the same run. Menisik progress updates arrive through its own notification channel/card.
+- If Menisik returns `accepted=false`, `status=blocked`, or `outcome_code=blocked_ineligible_repo`, treat that as the final answer.
+- For blocked runs, echo the Menisik reason, `scope_notes`, and `next_steps` only. Do not offer monitoring, retries, scheduling, dependency cleanup, doctor workflows, or any background follow-up.
 - Never invent in-progress activity for a blocked run. A blocked run has no dependency install, no fork, no background worker, and no delayed completion.
 - Never output placeholders such as `<work_in_progress>` or suggest that a blocked repo is still running.
 - Do not suggest `override_limits`, forced targeted runs, or bypassing guardrails unless the user explicitly asks to override limits or force the run.
@@ -115,18 +116,18 @@ metadata: {{"openclaw": {{"requires": {{"bins": ["python3"]}}}}}}
 - test notification delivery: `test_notify`
 - route natural language safely: `route --text "make 1 contribution"`
 - execute natural language request: `message --text "make 1 contribution"`
-- explicit Rover prefix examples:
-  - `rover profile`
-  - `rover doctor`
-  - `rover run owner/repo bugfix`
-  - `rover scan security owner/repo`
-  - `rover scan trust owner/repo`
-  - `rover scan owner/repo --kind audit`
-  - `rover list-prs open`
+- explicit Menisik prefix examples:
+  - `menisik profile`
+  - `menisik doctor`
+  - `menisik run owner/repo bugfix`
+  - `menisik scan security owner/repo`
+  - `menisik scan trust owner/repo`
+  - `menisik scan owner/repo --kind audit`
+  - `menisik list-prs open`
 
 ## Notes
 
-- Rover is the canonical integration name.
+- Menisik is the canonical integration name; `rover` is the deprecated pre-rename alias.
 - `github-contribution-engine` is a compatibility alias only.
 - For Discord / Telegram / WhatsApp flows, prefer the MCP server so OpenClaw can start a background run and poll status by `run_id`.
 - Do not write files into `~/.openclaw/sandboxes/...` unless the path is explicitly confirmed writable.
@@ -135,7 +136,7 @@ metadata: {{"openclaw": {{"requires": {{"bins": ["python3"]}}}}}}
 """
 
 
-def _render_wrapper(rover_bin: str) -> str:
+def _render_wrapper(menisik_bin: str) -> str:
     return f"""#!/usr/bin/env python3
 from __future__ import annotations
 
@@ -147,16 +148,19 @@ import shutil
 import subprocess
 import sys
 
-ROVER_BIN_CANDIDATES = [
-    os.getenv("ROVER_BIN", "").strip(),
-    {rover_bin!r},
+MENISIK_BIN_CANDIDATES = [
+    os.getenv("MENISIK_BIN", "").strip(),
+    os.getenv("ROVER_BIN", "").strip(),  # deprecated pre-rename spelling
+    {menisik_bin!r},
+    shutil.which("menisik") or "",
     shutil.which("rover") or "",
+    str(Path.home() / ".local" / "bin" / "menisik"),
     str(Path.home() / ".local" / "bin" / "rover"),
 ]
 
 
-def resolve_rover_bin() -> str:
-    for candidate in ROVER_BIN_CANDIDATES:
+def resolve_menisik_bin() -> str:
+    for candidate in MENISIK_BIN_CANDIDATES:
         if not candidate:
             continue
         path = Path(candidate).expanduser()
@@ -165,17 +169,17 @@ def resolve_rover_bin() -> str:
         found = shutil.which(candidate)
         if found:
             return found
-    raise FileNotFoundError("Rover executable not found. Checked ROVER_BIN, installed wrapper target, PATH, and ~/.local/bin/rover.")
+    raise FileNotFoundError("Menisik executable not found. Checked MENISIK_BIN (and legacy ROVER_BIN), installed wrapper target, PATH, and ~/.local/bin/menisik.")
 
 
-def run_rover(args: list[str]) -> int:
+def run_menisik(args: list[str]) -> int:
     try:
-        rover_bin = resolve_rover_bin()
+        menisik_bin = resolve_menisik_bin()
     except FileNotFoundError as exc:
         sys.stdout.write(json.dumps({{"error": str(exc), "action": "wrapper_error"}}, indent=2) + "\\n")
         return 127
     try:
-        proc = subprocess.run([rover_bin, *args], capture_output=True, text=True, timeout=1800)
+        proc = subprocess.run([menisik_bin, *args], capture_output=True, text=True, timeout=1800)
     except subprocess.TimeoutExpired:
         sys.stdout.write(json.dumps({{"error": "timed out after 1800s", "action": "wrapper_timeout"}}, indent=2) + "\\n")
         return 1
@@ -187,7 +191,7 @@ def run_rover(args: list[str]) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="OpenClaw wrapper for Rover.")
+    parser = argparse.ArgumentParser(description="OpenClaw wrapper for Menisik.")
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("doctor")
@@ -236,30 +240,30 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     if args.command == "doctor":
-        return run_rover(["doctor", "--json"])
+        return run_menisik(["doctor", "--json"])
     if args.command == "profile":
-        return run_rover(["profile", "--json"])
+        return run_menisik(["profile", "--json"])
     if args.command == "contrib_report":
-        return run_rover(["report", "--json"])
+        return run_menisik(["report", "--json"])
     if args.command == "contrib_check":
-        return run_rover(["check", "--json"])
+        return run_menisik(["check", "--json"])
     if args.command == "contrib_respond":
-        return run_rover(["respond", "--json"])
+        return run_menisik(["respond", "--json"])
     if args.command == "repo_inspect":
         payload = ["inspect", args.repo, "--json"]
         if args.cached:
             payload.append("--cached")
         if args.refresh:
             payload.append("--refresh")
-        return run_rover(payload)
+        return run_menisik(payload)
     if args.command == "list_prs":
         payload = ["list-prs"]
         if args.status != "all":
             payload.append(args.status)
         payload.append("--json")
-        return run_rover(payload)
+        return run_menisik(payload)
     if args.command == "test_notify":
-        return run_rover(["--test-notify", "--json"])
+        return run_menisik(["--test-notify", "--json"])
     if args.command == "contrib_once":
         payload = ["run", str(args.count), "--goal", args.goal, "--json"]
         if args.first_pr:
@@ -268,7 +272,7 @@ def main() -> int:
             payload.append("--dry-run")
         if args.override_limits:
             payload.append("--override-limits")
-        return run_rover(payload)
+        return run_menisik(payload)
     if args.command == "contrib_targeted":
         payload = ["run", str(args.count), args.repo, "--goal", args.goal, "--json"]
         if args.first_pr:
@@ -277,13 +281,13 @@ def main() -> int:
             payload.append("--dry-run")
         if args.override_limits:
             payload.append("--override-limits")
-        return run_rover(payload)
+        return run_menisik(payload)
     if args.command == "route":
-        return run_rover(["--command-text", args.text, "--route-only", "--json"])
+        return run_menisik(["--command-text", args.text, "--route-only", "--json"])
     if args.command == "message":
-        return run_rover(["--command-text", args.text, "--json"])
+        return run_menisik(["--command-text", args.text, "--json"])
     if args.command == "scan":
-        return run_rover(["scan", args.repo, "--kind", args.kind, "--json"])
+        return run_menisik(["scan", args.repo, "--kind", args.kind, "--json"])
     raise SystemExit(f"Unsupported command: {{args.command}}")
 
 
@@ -295,7 +299,7 @@ if __name__ == "__main__":
 def _ensure_openclaw_config(
     root: Path,
     *,
-    rover_mcp_bin: str,
+    menisik_mcp_bin: str,
     enable_skill: bool,
 ) -> Path:
     config_path = root / "openclaw.json"
@@ -318,13 +322,16 @@ def _ensure_openclaw_config(
 
     mcp = config.setdefault("mcp", {})
     servers = mcp.setdefault("servers", {})
-    servers["rover"] = {"command": rover_mcp_bin, "args": []}
+    servers["menisik"] = {"command": menisik_mcp_bin, "args": []}
+    # Drop the pre-rename server entry so the engine is not registered twice.
+    servers.pop("rover", None)
 
     if enable_skill:
         skills = config.setdefault("skills", {})
         entries = skills.setdefault("entries", {})
-        rover_entry = entries.setdefault("rover", {})
-        rover_entry["enabled"] = True
+        menisik_entry = entries.setdefault("menisik", {})
+        menisik_entry["enabled"] = True
+        entries.pop("rover", None)
 
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
@@ -333,36 +340,37 @@ def _ensure_openclaw_config(
 
 def install_openclaw_assets(
     *,
-    rover_bin: str,
+    menisik_bin: str,
     python_bin: str,
-    rover_mcp_bin: str,
+    menisik_mcp_bin: str,
     openclaw_root: str | None = None,
     openclaw_workspace: str | None = None,
     enable_skill: bool = True,
 ) -> tuple[Path, Path]:
-    normalized_rover = _require_absolute_file(rover_bin, "rover_bin")
+    normalized_menisik = _require_absolute_file(menisik_bin, "menisik_bin")
     _require_absolute_file(python_bin, "python_bin")
-    normalized_rover_mcp = _require_absolute_file(rover_mcp_bin, "rover_mcp_bin")
+    normalized_menisik_mcp = _require_absolute_file(menisik_mcp_bin, "menisik_mcp_bin")
 
     primary_root = _openclaw_root(openclaw_root)
     workspace_root = _workspace_skill_root(openclaw_workspace, openclaw_root)
     shared_root = _shared_skill_root(openclaw_root)
 
-    canonical_wrapper = primary_root / "tools" / "rover.py"
+    canonical_wrapper = primary_root / "tools" / "menisik.py"
+    deprecated_wrapper = primary_root / "tools" / "rover.py"
     legacy_wrapper = primary_root / "tools" / "contribution.py"
-    for tool_path in (canonical_wrapper, legacy_wrapper):
+    for tool_path in (canonical_wrapper, deprecated_wrapper, legacy_wrapper):
         tool_path.parent.mkdir(parents=True, exist_ok=True)
-        tool_path.write_text(_render_wrapper(normalized_rover), encoding="utf-8")
+        tool_path.write_text(_render_wrapper(normalized_menisik), encoding="utf-8")
         try:
             tool_path.chmod(0o755)
         except OSError:
             pass
 
     invoke = _quote(_normalize_path(canonical_wrapper))
-    canonical_skill_path = workspace_root / "rover" / "SKILL.md"
+    canonical_skill_path = workspace_root / "menisik" / "SKILL.md"
     for skill_root, skill_name in (
-        (workspace_root, "rover"),
-        (shared_root, "rover"),
+        (workspace_root, "menisik"),
+        (shared_root, "menisik"),
         (workspace_root, "github-contribution-engine"),
         (shared_root, "github-contribution-engine"),
     ):
@@ -371,27 +379,33 @@ def install_openclaw_assets(
         skill_text = _render_skill(skill_name, invoke)
         (skill_dir / "SKILL.md").write_text(skill_text, encoding="utf-8")
 
-    _ensure_openclaw_config(primary_root, rover_mcp_bin=normalized_rover_mcp, enable_skill=enable_skill)
+    _ensure_openclaw_config(primary_root, menisik_mcp_bin=normalized_menisik_mcp, enable_skill=enable_skill)
     return canonical_skill_path, canonical_wrapper
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Install Rover OpenClaw skill, wrapper, and MCP config.")
-    parser.add_argument("--rover-bin", required=True, help="Absolute path to the rover executable.")
+    parser = argparse.ArgumentParser(description="Install Menisik OpenClaw skill, wrapper, and MCP config.")
+    parser.add_argument("--menisik-bin", default="", help="Absolute path to the menisik executable.")
+    parser.add_argument("--menisik-mcp-bin", default="", help="Absolute path to the menisik-mcp executable.")
+    parser.add_argument("--rover-bin", default="", help="Deprecated alias for --menisik-bin.")
+    parser.add_argument("--rover-mcp-bin", default="", help="Deprecated alias for --menisik-mcp-bin.")
     parser.add_argument("--python-bin", required=True, help="Absolute path to the Python interpreter OpenClaw should use.")
-    parser.add_argument("--rover-mcp-bin", required=True, help="Absolute path to the rover-mcp executable.")
     parser.add_argument("--openclaw-root", default="", help="Optional override for the OpenClaw home directory.")
     parser.add_argument("--openclaw-workspace", default="", help="Optional override for the OpenClaw workspace directory.")
-    parser.add_argument("--disable-skill", action="store_true", help="Do not enable the native Rover skill entry in openclaw.json.")
+    parser.add_argument("--disable-skill", action="store_true", help="Do not enable the native Menisik skill entry in openclaw.json.")
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
+    menisik_bin = args.menisik_bin or args.rover_bin
+    menisik_mcp_bin = args.menisik_mcp_bin or args.rover_mcp_bin
+    if not menisik_bin or not menisik_mcp_bin:
+        raise SystemExit("--menisik-bin and --menisik-mcp-bin are required (or their deprecated --rover-* aliases).")
     skill_path, tool_path = install_openclaw_assets(
-        rover_bin=args.rover_bin,
+        menisik_bin=menisik_bin,
         python_bin=args.python_bin,
-        rover_mcp_bin=args.rover_mcp_bin,
+        menisik_mcp_bin=menisik_mcp_bin,
         openclaw_root=args.openclaw_root or None,
         openclaw_workspace=args.openclaw_workspace or None,
         enable_skill=not args.disable_skill,

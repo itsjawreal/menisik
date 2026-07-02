@@ -34,7 +34,7 @@ def install_mcp(project_root: Path) -> Path:
     if _is_wsl():
         config = {
             "mcpServers": {
-                "rover": {
+                "menisik": {
                     "command": "wsl",
                     "args": [
                         "-d", distro,
@@ -50,7 +50,7 @@ def install_mcp(project_root: Path) -> Path:
         python = sys.executable
         config = {
             "mcpServers": {
-                "rover": {
+                "menisik": {
                     "command": python,
                     "args": ["-m", "src.contribution_mcp.server"],
                     "cwd": linux_path,

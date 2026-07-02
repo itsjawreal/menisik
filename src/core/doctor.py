@@ -50,22 +50,34 @@ from src.core.github_auth import github_auth_mode, resolve_github_token
 
 OPENCLAW_ROOT = Path(os.getenv("OPENCLAW_HOME", "~/.openclaw")).expanduser()
 OPENCLAW_LEGACY_ROOT = Path("~/openclaw").expanduser()
-OPENCLAW_SKILL_CANDIDATES = [
+OPENCLAW_SKILL_CANDIDATES_CANONICAL = [
+    OPENCLAW_ROOT / "workspace" / "skills" / "menisik" / "SKILL.md",
+    OPENCLAW_ROOT / "skills" / "menisik" / "SKILL.md",
+]
+OPENCLAW_SKILL_CANDIDATES_LEGACY = [
     OPENCLAW_ROOT / "workspace" / "skills" / "rover" / "SKILL.md",
     OPENCLAW_ROOT / "skills" / "rover" / "SKILL.md",
     OPENCLAW_ROOT / "workspace" / "skills" / "github-contribution-engine" / "SKILL.md",
     OPENCLAW_ROOT / "skills" / "github-contribution-engine" / "SKILL.md",
+    OPENCLAW_LEGACY_ROOT / "workspace" / "skills" / "menisik" / "SKILL.md",
+    OPENCLAW_LEGACY_ROOT / "skills" / "menisik" / "SKILL.md",
     OPENCLAW_LEGACY_ROOT / "workspace" / "skills" / "rover" / "SKILL.md",
     OPENCLAW_LEGACY_ROOT / "skills" / "rover" / "SKILL.md",
     OPENCLAW_LEGACY_ROOT / "workspace" / "skills" / "github-contribution-engine" / "SKILL.md",
     OPENCLAW_LEGACY_ROOT / "skills" / "github-contribution-engine" / "SKILL.md",
 ]
-OPENCLAW_WRAPPER_CANDIDATES = [
+OPENCLAW_SKILL_CANDIDATES = OPENCLAW_SKILL_CANDIDATES_CANONICAL + OPENCLAW_SKILL_CANDIDATES_LEGACY
+OPENCLAW_WRAPPER_CANDIDATES_CANONICAL = [
+    OPENCLAW_ROOT / "tools" / "menisik.py",
+]
+OPENCLAW_WRAPPER_CANDIDATES_LEGACY = [
     OPENCLAW_ROOT / "tools" / "rover.py",
     OPENCLAW_ROOT / "tools" / "contribution.py",
+    OPENCLAW_LEGACY_ROOT / "tools" / "menisik.py",
     OPENCLAW_LEGACY_ROOT / "tools" / "rover.py",
     OPENCLAW_LEGACY_ROOT / "tools" / "contribution.py",
 ]
+OPENCLAW_WRAPPER_CANDIDATES = OPENCLAW_WRAPPER_CANDIDATES_CANONICAL + OPENCLAW_WRAPPER_CANDIDATES_LEGACY
 OPENCLAW_CONFIG_PATH = OPENCLAW_ROOT / "openclaw.json"
 HERMES_CONFIG_PATH = Path(os.getenv("HERMES_CONFIG_PATH", "~/.hermes/config.yaml")).expanduser()
 
@@ -142,11 +154,17 @@ def _json_load(path: Path) -> dict:
 
 def _openclaw_mcp_ready() -> tuple[bool, str]:
     config = _json_load(OPENCLAW_CONFIG_PATH)
-    server = (((config.get("mcp") or {}).get("servers") or {}).get("rover") or {})
-    command = str(server.get("command") or "").strip()
+    servers = ((config.get("mcp") or {}).get("servers") or {})
+    command = str((servers.get("menisik") or {}).get("command") or "").strip()
     if command:
-        return True, f"{OPENCLAW_CONFIG_PATH} → mcp.servers.rover"
-    return False, f"{OPENCLAW_CONFIG_PATH} missing mcp.servers.rover"
+        return True, f"{OPENCLAW_CONFIG_PATH} → mcp.servers.menisik"
+    legacy_command = str((servers.get("rover") or {}).get("command") or "").strip()
+    if legacy_command:
+        return True, (
+            f"{OPENCLAW_CONFIG_PATH} → mcp.servers.rover (ok, legacy name; "
+            "re-run --install-openclaw to migrate to mcp.servers.menisik)"
+        )
+    return False, f"{OPENCLAW_CONFIG_PATH} missing mcp.servers.menisik"
 
 
 def _hermes_mcp_ready() -> tuple[bool, str]:
@@ -154,9 +172,16 @@ def _hermes_mcp_ready() -> tuple[bool, str]:
         text = HERMES_CONFIG_PATH.read_text(encoding="utf-8")
     except OSError:
         return False, f"{HERMES_CONFIG_PATH} not found"
-    if re.search(r"(?m)^mcp_servers:\s*(?:\n|$)", text) and re.search(r"(?m)^  rover:\s*(?:\n|$)", text):
-        return True, f"{HERMES_CONFIG_PATH} → mcp_servers.rover"
-    return False, f"{HERMES_CONFIG_PATH} missing mcp_servers.rover"
+    if not re.search(r"(?m)^mcp_servers:\s*(?:\n|$)", text):
+        return False, f"{HERMES_CONFIG_PATH} missing mcp_servers.menisik"
+    if re.search(r"(?m)^  menisik:\s*(?:\n|$)", text):
+        return True, f"{HERMES_CONFIG_PATH} → mcp_servers.menisik"
+    if re.search(r"(?m)^  rover:\s*(?:\n|$)", text):
+        return True, (
+            f"{HERMES_CONFIG_PATH} → mcp_servers.rover (ok, legacy name; "
+            "re-run --install-hermes to migrate to mcp_servers.menisik)"
+        )
+    return False, f"{HERMES_CONFIG_PATH} missing mcp_servers.menisik"
 
 
 def _notification_route_check() -> DoctorCheck:
@@ -223,11 +248,11 @@ def _entrypoint_check() -> DoctorCheck:
     except OSError:
         python_resolved = python_path
 
-    rover_on_path_raw = shutil.which("rover") or ""
-    rover_on_path = Path(rover_on_path_raw).expanduser() if rover_on_path_raw else None
-    if rover_on_path is not None:
+    cli_on_path_raw = shutil.which("menisik") or shutil.which("rover") or ""
+    cli_on_path = Path(cli_on_path_raw).expanduser() if cli_on_path_raw else None
+    if cli_on_path is not None:
         try:
-            rover_on_path = rover_on_path.resolve()
+            cli_on_path = cli_on_path.resolve()
         except OSError:
             pass
 
@@ -235,12 +260,12 @@ def _entrypoint_check() -> DoctorCheck:
     project_venv_dirs = _project_venv_dirs()
     looks_local_module = argv0_resolved.name in {"builder.py", "contribute.py"}
     same_runtime = argv0_resolved.parent == runtime_dir
-    same_path_runtime = rover_on_path is not None and rover_on_path.parent == runtime_dir
-    same_entrypoint = rover_on_path is not None and rover_on_path == argv0_resolved
+    same_path_runtime = cli_on_path is not None and cli_on_path.parent == runtime_dir
+    same_entrypoint = cli_on_path is not None and cli_on_path == argv0_resolved
     project_venv_entrypoint = any(
         _path_is_within(path, candidate)
         for candidate in project_venv_dirs
-        for path in (argv0_resolved, rover_on_path)
+        for path in (argv0_resolved, cli_on_path)
     )
     status = (
         "ok"
@@ -253,9 +278,9 @@ def _entrypoint_check() -> DoctorCheck:
         )
         else "warn"
     )
-    rover_label = str(rover_on_path) if rover_on_path else "not found on PATH"
+    cli_label = str(cli_on_path) if cli_on_path else "not found on PATH"
     detail = (
-        f"argv0={argv0_resolved} | python={python_resolved} | rover={rover_label} | root={ROOT}"
+        f"argv0={argv0_resolved} | python={python_resolved} | cli={cli_label} | root={ROOT}"
     )
     return DoctorCheck("entrypoint", status, detail)
 
@@ -567,22 +592,26 @@ def collect_doctor_checks() -> list[DoctorCheck]:
     checks.append(_notification_route_check())
     checks.append(_notification_transport_check())
 
-    openclaw_skill_path = next((str(path) for path in OPENCLAW_SKILL_CANDIDATES if path.exists()), "")
-    checks.append(
-        DoctorCheck(
-            "openclaw-skill",
-            "ok" if openclaw_skill_path else "warn",
-            openclaw_skill_path or "OpenClaw skill not installed for rover",
-        )
-    )
-    openclaw_wrapper_path = next((str(path) for path in OPENCLAW_WRAPPER_CANDIDATES if path.exists()), "")
-    checks.append(
-        DoctorCheck(
-            "openclaw-wrapper",
-            "ok" if openclaw_wrapper_path else "warn",
-            openclaw_wrapper_path or "OpenClaw wrapper not installed under ~/.openclaw/tools",
-        )
-    )
+    openclaw_skill_path = next((str(path) for path in OPENCLAW_SKILL_CANDIDATES_CANONICAL if path.exists()), "")
+    openclaw_skill_legacy_path = next((str(path) for path in OPENCLAW_SKILL_CANDIDATES_LEGACY if path.exists()), "")
+    if openclaw_skill_path:
+        skill_status, skill_detail = "ok", openclaw_skill_path
+    elif openclaw_skill_legacy_path:
+        skill_status = "ok"
+        skill_detail = f"{openclaw_skill_legacy_path} (ok, legacy path; re-run --install-openclaw to migrate)"
+    else:
+        skill_status, skill_detail = "warn", "OpenClaw skill not installed for menisik"
+    checks.append(DoctorCheck("openclaw-skill", skill_status, skill_detail))
+    openclaw_wrapper_path = next((str(path) for path in OPENCLAW_WRAPPER_CANDIDATES_CANONICAL if path.exists()), "")
+    openclaw_wrapper_legacy_path = next((str(path) for path in OPENCLAW_WRAPPER_CANDIDATES_LEGACY if path.exists()), "")
+    if openclaw_wrapper_path:
+        wrapper_status, wrapper_detail = "ok", openclaw_wrapper_path
+    elif openclaw_wrapper_legacy_path:
+        wrapper_status = "ok"
+        wrapper_detail = f"{openclaw_wrapper_legacy_path} (ok, legacy path; re-run --install-openclaw to migrate)"
+    else:
+        wrapper_status, wrapper_detail = "warn", "OpenClaw wrapper not installed under ~/.openclaw/tools"
+    checks.append(DoctorCheck("openclaw-wrapper", wrapper_status, wrapper_detail))
     openclaw_mcp_ok, openclaw_mcp_detail = _openclaw_mcp_ready()
     checks.append(DoctorCheck("openclaw-mcp", "ok" if openclaw_mcp_ok else "warn", openclaw_mcp_detail))
     hermes_mcp_ok, hermes_mcp_detail = _hermes_mcp_ready()
@@ -682,7 +711,7 @@ def build_doctor_report() -> str:
             actions.append("Replace user-specific absolute CLI paths in `.env` with PATH-based commands for portability.")
         elif check.name == "entrypoint" and check.status != "ok":
             actions.append(
-                "Active rover entrypoint may be stale for this Python environment; reinstall with `python -m pip install -e .` and refresh your shell command cache."
+                "Active menisik entrypoint may be stale for this Python environment; reinstall with `python -m pip install -e .` and refresh your shell command cache."
             )
         elif check.name.startswith("storage-") and check.status != "ok":
             actions.append(
@@ -693,13 +722,13 @@ def build_doctor_report() -> str:
         elif check.name == "codex-auth" and check.status != "ok":
             actions.append("Finish Codex authentication with `codex login --device-auth`, `codex login`, or set `OPENAI_API_KEY`.")
         elif check.name == "openclaw-skill" and check.status != "ok":
-            actions.append("Install the canonical Rover OpenClaw skill under `~/.openclaw/workspace/skills/rover` or `~/.openclaw/skills/rover`.")
+            actions.append("Install the canonical Menisik OpenClaw skill under `~/.openclaw/workspace/skills/menisik` or `~/.openclaw/skills/menisik`.")
         elif check.name == "openclaw-wrapper" and check.status != "ok":
-            actions.append("Install the Rover OpenClaw wrapper at `~/.openclaw/tools/rover.py` so native skill commands can execute.")
+            actions.append("Install the Menisik OpenClaw wrapper at `~/.openclaw/tools/menisik.py` so native skill commands can execute.")
         elif check.name == "openclaw-mcp" and check.status != "ok":
-            actions.append("Upsert `mcp.servers.rover` in `~/.openclaw/openclaw.json` so OpenClaw can call Rover over MCP.")
+            actions.append("Upsert `mcp.servers.menisik` in `~/.openclaw/openclaw.json` so OpenClaw can call Menisik over MCP.")
         elif check.name == "hermes-mcp" and check.status != "ok":
-            actions.append("Add `mcp_servers.rover` to `~/.hermes/config.yaml` so Hermes can call Rover over MCP.")
+            actions.append("Add `mcp_servers.menisik` to `~/.hermes/config.yaml` so Hermes can call Menisik over MCP.")
         elif check.name == "openclaw-legacy" and check.status != "ok":
             actions.append("Treat `~/openclaw` as legacy only; move active skills and wrappers to `~/.openclaw`.")
 
@@ -732,9 +761,9 @@ def build_doctor_report() -> str:
             bullet_block(
                 "OpenClaw integration note",
                 [
-                    "Canonical OpenClaw paths are `~/.openclaw/workspace/skills/rover/SKILL.md`, `~/.openclaw/skills/rover/SKILL.md`, and `~/.openclaw/tools/rover.py`.",
-                    "Primary automation path is `mcp.servers.rover` in `~/.openclaw/openclaw.json`; the native skill is optional compatibility/UX.",
-                    "`github-contribution-engine` and `~/openclaw` are compatibility surfaces only.",
+                    "Canonical OpenClaw paths are `~/.openclaw/workspace/skills/menisik/SKILL.md`, `~/.openclaw/skills/menisik/SKILL.md`, and `~/.openclaw/tools/menisik.py`.",
+                    "Primary automation path is `mcp.servers.menisik` in `~/.openclaw/openclaw.json`; the native skill is optional compatibility/UX.",
+                    "`rover`-named paths, `github-contribution-engine`, and `~/openclaw` are legacy compatibility surfaces only.",
                 ],
             ),
         ]

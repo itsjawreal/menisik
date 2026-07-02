@@ -515,7 +515,7 @@ class OperatorExperienceTests(unittest.TestCase):
 
         self.assertEqual(check.status, "ok")
         self.assertIn("argv0=", check.detail)
-        self.assertIn("rover=", check.detail)
+        self.assertIn("cli=", check.detail)
 
     def test_codex_auth_ready_sanitizes_internal_cli_error(self) -> None:
         with mock.patch("src.core.doctor.os.getenv", return_value=""), mock.patch(

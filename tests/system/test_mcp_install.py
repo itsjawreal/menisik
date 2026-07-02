@@ -22,7 +22,7 @@ class MCPInstallTests(unittest.TestCase):
 
     def test_wsl_config_uses_wsl_command(self) -> None:
         config = self._install(is_wsl=True, distro="Ubuntu-20.04")
-        server = config["mcpServers"]["rover"]
+        server = config["mcpServers"]["menisik"]
         self.assertEqual(server["command"], "wsl")
         self.assertIn("-d", server["args"])
         self.assertIn("Ubuntu-20.04", server["args"])
@@ -30,12 +30,12 @@ class MCPInstallTests(unittest.TestCase):
 
     def test_wsl_config_contains_mcp_server_module(self) -> None:
         config = self._install(is_wsl=True)
-        bash_cmd = config["mcpServers"]["rover"]["args"][-1]
+        bash_cmd = config["mcpServers"]["menisik"]["args"][-1]
         self.assertIn("src.contribution_mcp.server", bash_cmd)
 
     def test_non_wsl_config_uses_python_executable(self) -> None:
         config = self._install(is_wsl=False)
-        server = config["mcpServers"]["rover"]
+        server = config["mcpServers"]["menisik"]
         self.assertEqual(server["command"], sys.executable)
         self.assertIn("-m", server["args"])
         self.assertIn("src.contribution_mcp.server", server["args"])
@@ -58,11 +58,11 @@ class MCPInstallTests(unittest.TestCase):
                 out = install_mcp(root)
             parsed = json.loads(out.read_text(encoding="utf-8"))
             self.assertIn("mcpServers", parsed)
-            self.assertIn("rover", parsed["mcpServers"])
+            self.assertIn("menisik", parsed["mcpServers"])
 
     def test_wsl_distro_name_from_env(self) -> None:
         config = self._install(is_wsl=True, distro="Debian")
-        args = config["mcpServers"]["rover"]["args"]
+        args = config["mcpServers"]["menisik"]["args"]
         distro_index = args.index("-d") + 1
         self.assertEqual(args[distro_index], "Debian")
 
@@ -83,6 +83,6 @@ class MCPInstallTests(unittest.TestCase):
                  patch.dict(os.environ, {"WSL_DISTRO_NAME": "Ubuntu-20.04"}):
                 out = install_mcp(spaced)
             config = json.loads(out.read_text(encoding="utf-8"))
-        bash_cmd = config["mcpServers"]["rover"]["args"][-1]
+        bash_cmd = config["mcpServers"]["menisik"]["args"][-1]
         linux_path = str(spaced).replace("\\", "/")
         self.assertIn(shlex.quote(linux_path), bash_cmd)
