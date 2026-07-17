@@ -11,6 +11,7 @@
 # runtime state (temp files, not source)
 data/*.json
 data/*.sqlite3
+data/*.lock
 data/.ai_prompts/
 .rover/
 .menisik/
