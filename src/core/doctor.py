@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -367,6 +368,35 @@ def _codex_auth_ready() -> tuple[bool, str]:
     )
 
 
+def _claude_auth_ready() -> tuple[bool, str]:
+    if os.getenv("ANTHROPIC_API_KEY", "").strip():
+        return True, "ANTHROPIC_API_KEY is set"
+    if not _command_exists(CLAUDE_CMD):
+        return False, "Claude CLI not installed"
+    ok, detail = _run_command([CLAUDE_CMD, "auth", "status"])
+    # `claude auth status` exits 0 whether logged in or not and reports JSON —
+    # the loggedIn field is the only reliable signal.
+    try:
+        payload = json.loads(detail)
+    except (ValueError, TypeError):
+        payload = None
+    if isinstance(payload, dict) and "loggedIn" in payload:
+        if payload.get("loggedIn"):
+            method = str(payload.get("authMethod") or "").strip()
+            return True, f"Claude login is active ({method})" if method else "Claude login is active"
+        return False, "Claude login is not active; run `claude` then `/login`"
+    # Older CLIs without `auth status` fall back to keyword detection.
+    return _sanitize_cli_status(
+        "Claude",
+        ok,
+        detail,
+        success_fallback="Claude login is active",
+        login_hint="Claude login is not active; run `claude` then `/login`",
+        missing_fallback="Claude CLI not installed",
+        error_fallback="Claude CLI returned an unexpected auth error; run `claude auth status` manually",
+    )
+
+
 def collect_doctor_checks() -> list[DoctorCheck]:
     checks: list[DoctorCheck] = []
     runtime = get_runtime_profile()
@@ -519,6 +549,8 @@ def collect_doctor_checks() -> list[DoctorCheck]:
     if runtime.backend == "codex-cli":
         selected_backend_auth_ok = codex_auth_ok
         selected_backend_auth_detail = codex_auth_detail
+    elif runtime.backend == "claude-cli":
+        selected_backend_auth_ok, selected_backend_auth_detail = _claude_auth_ready()
     checks.append(
         DoctorCheck(
             "selected-backend",
