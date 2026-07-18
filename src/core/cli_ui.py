@@ -580,8 +580,17 @@ def print_pr_summary(
 
 def _choose_arrow(prompt: str, options: list[str]) -> str:
     """Arrow-key picker — writes directly to /dev/tty to avoid Rich buffer conflicts."""
+    import sys as _sys
     import tty
     import termios
+
+    # Backgrounded/piped runs can still open /dev/tty (the pts exists) even
+    # though nobody is attached to answer — the raw-mode read then blocks
+    # forever. Without an interactive stdin, take the safe default instead.
+    if not _sys.stdin.isatty():
+        _console.print()
+        _console.print(f"  [dim]{prompt} — no interactive stdin; choosing: {options[-1]}[/]")
+        return options[-1]
 
     # Open /dev/tty directly so Rich's stdout buffer doesn't interfere
     try:
